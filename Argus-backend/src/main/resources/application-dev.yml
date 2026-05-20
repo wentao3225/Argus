@@ -61,12 +61,6 @@ rag:
     #    jwt-secret: ${DD_RAG_JWT_SECRET:argus_rag-dev-jwt-secret-2026-04-20-32bytes}
     refresh-cookie-name: ARGUS_DD_RAG_REFRESH_TOKEN
     refresh-cookie-secure: false
-  dev-admin:
-    username: ${DD_RAG_DEV_ADMIN_USERNAME:your-admin-username}
-    email: ${DD_RAG_DEV_ADMIN_EMAIL:your-admin-email@example.com}
-    display-name: ${DD_RAG_DEV_ADMIN_DISPLAY_NAME:your-display-name}
-    password: ${DD_RAG_DEV_ADMIN_PASSWORD:your-admin-password}
-    user-code: ${DD_RAG_DEV_ADMIN_USER_CODE:your-admin-code}
 
 elasticsearch:
   host: ${ES_HOST:localhost}
