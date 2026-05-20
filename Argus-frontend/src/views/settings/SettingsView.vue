@@ -3,6 +3,7 @@ import { reactive, ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { extractApiError } from '@/api/http'
+import { PASSWORD_POLICY_PLACEHOLDER, validateChangePasswordForm } from '@/utils/password-policy'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -23,23 +24,9 @@ async function handleChangePassword() {
   errorMsg.value = ''
   successMsg.value = ''
 
-  if (!form.currentPassword.trim() || !form.newPassword.trim() || !form.confirmPassword.trim()) {
-    errorMsg.value = '请填写所有密码字段'
-    return
-  }
-
-  if (form.newPassword.length < 6) {
-    errorMsg.value = '新密码长度至少 6 个字符'
-    return
-  }
-
-  if (form.newPassword !== form.confirmPassword) {
-    errorMsg.value = '两次输入的新密码不一致'
-    return
-  }
-
-  if (form.currentPassword === form.newPassword) {
-    errorMsg.value = '新密码不能与当前密码相同'
+  const validationError = validateChangePasswordForm(form)
+  if (validationError) {
+    errorMsg.value = validationError
     return
   }
 
@@ -102,7 +89,7 @@ async function handleChangePassword() {
           <input
             v-model="form.newPassword"
             type="password"
-            placeholder="输入新密码（至少 6 位）"
+            :placeholder="PASSWORD_POLICY_PLACEHOLDER"
             autocomplete="new-password"
           />
         </div>

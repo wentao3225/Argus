@@ -2,6 +2,7 @@
 import { ref } from 'vue'
 import { changePassword } from '@/api/auth'
 import { extractApiError } from '@/api/http'
+import { PASSWORD_POLICY_PLACEHOLDER, validateChangePasswordForm } from '@/utils/password-policy'
 
 const props = defineProps<{
   inline?: boolean
@@ -22,18 +23,13 @@ async function handleSubmit() {
   error.value = ''
   success.value = ''
 
-  if (!currentPassword.value || !newPassword.value || !confirmPassword.value) {
-    error.value = '请填写所有字段'
-    return
-  }
-
-  if (newPassword.value.length < 6) {
-    error.value = '新密码长度不能少于6位'
-    return
-  }
-
-  if (newPassword.value !== confirmPassword.value) {
-    error.value = '两次输入的新密码不一致'
+  const validationError = validateChangePasswordForm({
+    currentPassword: currentPassword.value,
+    newPassword: newPassword.value,
+    confirmPassword: confirmPassword.value,
+  })
+  if (validationError) {
+    error.value = validationError
     return
   }
 
@@ -77,7 +73,7 @@ async function handleSubmit() {
           v-model="newPassword"
           type="password"
           autocomplete="new-password"
-          placeholder="输入新密码（至少6位）"
+          :placeholder="PASSWORD_POLICY_PLACEHOLDER"
         />
       </label>
       <label class="form-field">
