@@ -8,6 +8,7 @@ import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.user.mapper.UserMapper;
 import com.argus.rag.user.model.dto.ChangePasswordRequest;
 import com.argus.rag.user.model.entity.User;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  */
 @Slf4j
 @Service
+@RequiredArgsConstructor
 public class AccountService {
 
     private final UserMapper userMapper;
@@ -24,20 +26,13 @@ public class AccountService {
     private final PasswordPolicyValidator passwordValidator;
     private final RefreshTokenService refreshTokenService;
 
-    public AccountService(UserMapper userMapper, PasswordHasher passwordHasher,
-                          PasswordPolicyValidator passwordValidator, RefreshTokenService refreshTokenService) {
-        this.userMapper = userMapper;
-        this.passwordHasher = passwordHasher;
-        this.passwordValidator = passwordValidator;
-        this.refreshTokenService = refreshTokenService;
-    }
-
     /**
      * 修改密码：校验当前密码正确性 + 新密码复杂度，更新后吊销所有 refresh token。
      */
     @Transactional
-    public void changePassword(CurrentUserService.CurrentUser currentUser, ChangePasswordRequest request) {
-        passwordValidator.validate(request.newPassword());
+    public void changePassword(CurrentUserService.CurrentUser currentUser,
+                               ChangePasswordRequest request) {
+        PasswordPolicyValidator.validate(request.newPassword());
         User user = userMapper.selectById(currentUser.userId());
         if (user == null || user.getPasswordHash() == null) {
             throw new BusinessException("用户不存在");

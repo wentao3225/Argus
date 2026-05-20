@@ -36,12 +36,11 @@ public class CurrentUserService {
     /**
      * 要求当前用户为系统管理员，否则抛出 403
      */
-    public CurrentUser requireSystemAdmin() {
+    public void requireSystemAdmin() {
         CurrentUser currentUser = getRequiredCurrentUser();
         if (currentUser.systemRole() != SystemRole.ADMIN) {
             throw new ForbiddenException("当前用户不是系统管理员");
         }
-        return currentUser;
     }
 
     /**
