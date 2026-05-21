@@ -1,17 +1,15 @@
 package com.argus.rag.ingestion.service;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.argus.rag.common.enums.DocumentStatus;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.model.entity.DocumentEntity;
+import com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService;
 import com.argus.rag.ingestion.mapper.DocumentChunkMapper;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
-import com.argus.rag.ingestion.service.DocumentIngestionProcessor;
 import com.argus.rag.ingestion.vector.VectorIngestionService;
-import com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
 import org.springframework.retry.annotation.Retryable;
@@ -42,18 +40,30 @@ import java.util.List;
 @Slf4j
 public class DocumentIngestionAsyncService {
 
-    /** 失败原因字段最大长度 */
+    /**
+     * 失败原因字段最大长度
+     */
     private static final int FAILURE_REASON_MAX_LENGTH = 512;
 
-    /** 文档数据访问 */
+    /**
+     * 文档数据访问
+     */
     private final DocumentMapper documentMapper;
-    /** 文档分块处理引擎 */
+    /**
+     * 文档分块处理引擎
+     */
     private final DocumentIngestionProcessor documentIngestionProcessor;
-    /** 文档分块数据访问 */
+    /**
+     * 文档分块数据访问
+     */
     private final DocumentChunkMapper documentChunkMapper;
-    /** 向量导入服务 */
+    /**
+     * 向量导入服务
+     */
     private final VectorIngestionService vectorIngestionService;
-    /** Elasticsearch chunk 索引服务 */
+    /**
+     * Elasticsearch chunk 索引服务
+     */
     private final ElasticsearchChunkIndexService elasticsearchChunkIndexService;
 
     /**
