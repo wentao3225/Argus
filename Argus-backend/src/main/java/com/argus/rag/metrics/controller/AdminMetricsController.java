@@ -14,7 +14,7 @@ import java.util.List;
 
 @OperationLog
 @RestController
-@RequestMapping("/api/admin/metrics")
+@RequestMapping("/admin/metrics")
 public class AdminMetricsController {
 
     private final CurrentUserService currentUserService;

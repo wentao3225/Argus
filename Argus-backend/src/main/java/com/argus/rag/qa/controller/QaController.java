@@ -28,7 +28,7 @@ import java.util.Map;
  * </p>
  */
 @RestController
-@RequestMapping("/api/qa")
+@RequestMapping("/qa")
 @OperationLog
 public class QaController {
 

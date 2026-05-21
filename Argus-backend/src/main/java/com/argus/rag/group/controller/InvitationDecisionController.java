@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/invitations")
+@RequestMapping("/invitations")
 public class InvitationDecisionController {
 
     private final GroupManagementService groupManagementService;

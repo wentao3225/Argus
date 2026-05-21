@@ -33,7 +33,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * </ul>
  */
 @RestController
-@RequestMapping("/api/assistant")
+@RequestMapping("/assistant")
 public class AssistantChatController {
 
     private static final long SSE_TIMEOUT_MILLIS = 0L;

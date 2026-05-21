@@ -12,7 +12,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/groups")
+@RequestMapping("/groups")
 public class GroupQueryController {
 
     private final GroupMembershipService groupMembershipService;

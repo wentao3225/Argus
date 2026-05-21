@@ -31,7 +31,7 @@ import java.util.List;
  * </ul>
  */
 @RestController
-@RequestMapping("/api/assistant/sessions")
+@RequestMapping("/assistant/sessions")
 @OperationLog
 public class AssistantSessionController {
 

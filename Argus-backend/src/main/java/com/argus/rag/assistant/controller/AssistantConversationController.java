@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
  * </ul>
  */
 @RestController
-@RequestMapping("/api/assistant/sessions")
+@RequestMapping("/assistant/sessions")
 @OperationLog
 public class AssistantConversationController {
 

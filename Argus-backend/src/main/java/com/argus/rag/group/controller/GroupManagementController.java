@@ -23,7 +23,7 @@ import java.util.List;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/groups")
+@RequestMapping("/groups")
 public class GroupManagementController {
 
     private final GroupManagementService groupManagementService;

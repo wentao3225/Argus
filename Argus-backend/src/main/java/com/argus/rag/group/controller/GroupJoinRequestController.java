@@ -21,7 +21,7 @@ import java.util.List;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/groups")
+@RequestMapping("/groups")
 public class GroupJoinRequestController {
 
     private final GroupJoinRequestService groupJoinRequestService;
