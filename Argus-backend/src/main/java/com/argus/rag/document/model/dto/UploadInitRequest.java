@@ -12,19 +12,19 @@ package com.argus.rag.document.model.dto;
  * @since 1.0.0
  */
 public record UploadInitRequest(
-        /** 目标群组 ID，文档将归属于该群组 */
+        /* 目标群组 ID，文档将归属于该群组 */
         Long groupId,
-        /** 原始文件名 */
+        /* 原始文件名 */
         String fileName,
-        /** 文件总大小，单位：字节 */
+        /* 文件总大小，单位：字节 */
         Long fileSize,
-        /** MIME 内容类型（如 "application/pdf"） */
+        /* MIME 内容类型（如 "application/pdf"） */
         String contentType,
-        /** 文件 SHA-256 哈希值，用于秒传校验 */
+        /* 文件 SHA-256 哈希值，用于秒传校验 */
         String fileHash,
-        /** 每个分片的大小，单位：字节 */
+        /* 每个分片的大小，单位：字节 */
         Long chunkSize,
-        /** 总分片数量 */
+        /* 总分片数量 */
         Integer chunkCount
 ) {
 }

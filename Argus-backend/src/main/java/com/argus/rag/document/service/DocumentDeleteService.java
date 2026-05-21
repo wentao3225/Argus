@@ -5,8 +5,8 @@ import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.model.entity.DocumentEntity;
 import com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService;
-import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.argus.rag.group.service.GroupMembershipService;
+import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -38,8 +38,10 @@ public class DocumentDeleteService {
         this.applicationEventPublisher = applicationEventPublisher;
     }
 
-    /** 软删除文档，需群组管理员权限 */
-    public void softDeleteDocument(Long userId, Long groupId, Long documentId) {
+    /**
+     * 软删除文档，需群组管理员权限
+     */
+    public void softDeleteDocument(Long groupId, Long documentId) {
         requireGroupId(groupId);
         groupMembershipService.requireGroupOwner(groupId);
         if (documentId == null || documentId <= 0) {
@@ -54,9 +56,11 @@ public class DocumentDeleteService {
         log.info("文档软删除完成: groupId={}, documentId={}", groupId, documentId);
     }
 
-    /** 重新处理失败的文档，需群组管理员权限 */
+    /**
+     * 重新处理失败的文档，需群组管理员权限
+     */
     @Transactional
-    public void retryFailedDocumentIngestion(Long userId, Long groupId, Long documentId) {
+    public void retryFailedDocumentIngestion(Long groupId, Long documentId) {
         requireGroupId(groupId);
         groupMembershipService.requireGroupOwner(groupId);
         if (documentId == null || documentId <= 0) {

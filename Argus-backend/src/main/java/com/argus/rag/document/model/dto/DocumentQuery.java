@@ -18,29 +18,45 @@ import java.time.LocalDateTime;
 @Data
 public class DocumentQuery {
 
-    /** 当前请求用户的 ID，用于权限过滤和群组关系的上下文判断 */
+    /**
+     * 当前请求用户的 ID，用于权限过滤和群组关系的上下文判断
+     */
     private Long currentUserId;
 
-    /** 按群组 ID 精确筛选文档 */
+    /**
+     * 按群组 ID 精确筛选文档
+     */
     private Long groupId;
 
-    /** 群组关系类型，用于按用户在群组中的角色（OWNER/MEMBER）过滤可读文档 */
+    /**
+     * 群组关系类型，用于按用户在群组中的角色（OWNER/MEMBER）过滤可读文档
+     */
     private String groupRelation;
 
-    /** 按文件名模糊搜索 */
+    /**
+     * 按文件名模糊搜索
+     */
     private String fileName;
 
-    /** 按上传者用户 ID 精确筛选 */
+    /**
+     * 按上传者用户 ID 精确筛选
+     */
     private Long uploaderUserId;
 
-    /** 按文档状态精确筛选（PENDING/PROCESSING/READY/FAILED） */
+    /**
+     * 按文档状态精确筛选（PENDING/PROCESSING/READY/FAILED）
+     */
     private String status;
 
-    /** 上传时间范围起始（含），ISO 8601 格式 */
+    /**
+     * 上传时间范围起始（含），ISO 8601 格式
+     */
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime uploadedFrom;
 
-    /** 上传时间范围结束（含），ISO 8601 格式 */
+    /**
+     * 上传时间范围结束（含），ISO 8601 格式
+     */
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
     private LocalDateTime uploadedTo;
 }

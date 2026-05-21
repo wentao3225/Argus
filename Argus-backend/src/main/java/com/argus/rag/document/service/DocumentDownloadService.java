@@ -31,7 +31,7 @@ public class DocumentDownloadService {
     }
 
     /** 获取文档下载信息，需群组成员权限 */
-    public DocumentDownloadVO downloadDocument(Long userId, Long groupId, Long documentId) {
+    public DocumentDownloadVO downloadDocument(Long groupId, Long documentId) {
         requireGroupId(groupId);
         groupMembershipService.requireGroupReadable(groupId);
         if (documentId == null || documentId <= 0) {

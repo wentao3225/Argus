@@ -17,17 +17,17 @@ import java.util.List;
  * @since 1.0.0
  */
 public record UploadInitResponse(
-        /** 是否为秒传，true 表示无需上传，前端直接跳转到文档详情页 */
+        /* 是否为秒传，true 表示无需上传，前端直接跳转到文档详情页 */
         boolean instantUpload,
-        /** 秒传成功时已有的文档 ID，仅 instantUpload=true 时有值 */
+        /* 秒传成功时已有的文档 ID，仅 instantUpload=true 时有值 */
         Long documentId,
-        /** 上传会话唯一标识（UUID），用于后续分片上传和状态查询 */
+        /* 上传会话唯一标识（UUID），用于后续分片上传和状态查询 */
         String uploadId,
-        /** 已上传的分片序号列表，用于断点续传时告知前端跳过这些分片 */
+        /* 已上传的分片序号列表，用于断点续传时告知前端跳过这些分片 */
         List<Integer> uploadedChunks,
-        /** 每个分片的大小（字节） */
+        /* 每个分片的大小（字节） */
         Long chunkSize,
-        /** 总分片数量 */
+        /* 总分片数量 */
         Integer chunkCount
 ) {
 
@@ -56,10 +56,10 @@ public record UploadInitResponse(
     /**
      * 创建断点续传响应（包含已上传分片列表）。
      *
-     * @param uploadId        上传会话标识
-     * @param uploadedChunks  已成功上传的分片序号列表
-     * @param chunkSize       分片大小（字节）
-     * @param chunkCount      总分片数
+     * @param uploadId       上传会话标识
+     * @param uploadedChunks 已成功上传的分片序号列表
+     * @param chunkSize      分片大小（字节）
+     * @param chunkCount     总分片数
      * @return 断点续传响应
      */
     public static UploadInitResponse uploadSession(

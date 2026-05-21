@@ -1,7 +1,7 @@
 package com.argus.rag.document.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.argus.rag.document.model.entity.DocumentUploadSessionEntity;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

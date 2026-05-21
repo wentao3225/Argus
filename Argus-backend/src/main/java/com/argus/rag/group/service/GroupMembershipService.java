@@ -5,8 +5,6 @@ import com.argus.rag.common.enums.GroupInvitationStatus;
 import com.argus.rag.common.enums.GroupRole;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.group.mapper.GroupMembershipMapper;
-import com.argus.rag.group.model.entity.Group;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,7 +34,9 @@ public class GroupMembershipService {
         this.currentUserService = currentUserService;
     }
 
-    /** 查询当前用户可见的群组列表（拥有的、加入的、待处理的邀请） */
+    /**
+     * 查询当前用户可见的群组列表（拥有的、加入的、待处理的邀请）
+     */
     public GroupQueryResult listVisibleGroups() {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
         return new GroupQueryResult(
@@ -46,12 +46,16 @@ public class GroupMembershipService {
         );
     }
 
-    /** 要求当前用户为目标群组成员，否则抛出异常，返回当前用户 */
+    /**
+     * 要求当前用户为目标群组成员，否则抛出异常，返回当前用户
+     */
     public CurrentUserService.CurrentUser requireCurrentUserMember(Long groupId) {
         return requireGroupReadable(groupId);
     }
 
-    /** 要求当前用户可读目标群组（即为其成员），否则抛出异常，返回当前用户 */
+    /**
+     * 要求当前用户可读目标群组（即为其成员），否则抛出异常，返回当前用户
+     */
     public CurrentUserService.CurrentUser requireGroupReadable(Long groupId) {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
         String role = groupMembershipMapper.selectActiveMembershipRole(currentUser.userId(), requireGroupId(groupId));
@@ -61,8 +65,11 @@ public class GroupMembershipService {
         return currentUser;
     }
 
-    /** 要求当前用户为目标群组 OWNER，否则抛出异常，返回当前用户 */
+    /**
+     * 要求当前用户为目标群组 OWNER，否则抛出异常，返回当前用户
+     */
     public CurrentUserService.CurrentUser requireGroupOwner(Long groupId) {
+        // 要求当前用户为业务用户（非管理员）
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
         String role = groupMembershipMapper.selectActiveMembershipRole(currentUser.userId(), requireGroupId(groupId));
         if (role == null) {
@@ -74,7 +81,9 @@ public class GroupMembershipService {
         return currentUser;
     }
 
-    /** 创建待处理的邀请（由其他服务内部调用，调用方需确保已通过权限校验） */
+    /**
+     * 创建待处理的邀请（由其他服务内部调用，调用方需确保已通过权限校验）
+     */
     @Transactional
     public void createPendingInvitation(Long groupId, Long inviteeUserId) {
         Long requiredGroupId = requireGroupId(groupId);
@@ -130,8 +139,8 @@ public class GroupMembershipService {
         Number groupId = (Number) row.get("groupId");
         Number pendingRequestCount = (Number) row.get("pendingRequestCount");
         return new VisibleGroup(
-                groupId.longValue(), 
-                String.valueOf(row.get("groupCode")), 
+                groupId.longValue(),
+                String.valueOf(row.get("groupCode")),
                 String.valueOf(row.get("groupName")),
                 row.get("description") == null ? "" : String.valueOf(row.get("description")),
                 pendingRequestCount == null ? 0L : pendingRequestCount.longValue(),
@@ -161,7 +170,9 @@ public class GroupMembershipService {
         return ((Number) value).longValue();
     }
 
-    /** 群组查询结果，包含拥有的群组、加入的群组和待处理邀请 */
+    /**
+     * 群组查询结果，包含拥有的群组、加入的群组和待处理邀请
+     */
     public record GroupQueryResult(
             /** 拥有的群组列表 */
             List<VisibleGroup> ownedGroups,
@@ -188,7 +199,9 @@ public class GroupMembershipService {
     ) {
     }
 
-    /** 待处理邀请信息 */
+    /**
+     * 待处理邀请信息
+     */
     public record PendingInvitationItem(
             Long invitationId,
             Long groupId,

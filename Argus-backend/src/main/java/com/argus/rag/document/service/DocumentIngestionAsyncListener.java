@@ -1,8 +1,8 @@
 package com.argus.rag.document.service;
 
 import com.argus.rag.ingestion.service.DocumentIngestionAsyncService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.event.TransactionPhase;
@@ -21,19 +21,13 @@ import org.springframework.transaction.event.TransactionalEventListener;
  */
 @Component
 @Slf4j
+@RequiredArgsConstructor
 public class DocumentIngestionAsyncListener {
 
-    /** 异步 ETL 执行服务 */
-    private final DocumentIngestionAsyncService documentIngestionAsyncService;
-
     /**
-     * 构造异步监听器，注入 ETL 服务。
-     *
-     * @param documentIngestionAsyncService 异步 ETL 服务
+     * 异步 ETL 执行服务
      */
-    public DocumentIngestionAsyncListener(DocumentIngestionAsyncService documentIngestionAsyncService) {
-        this.documentIngestionAsyncService = documentIngestionAsyncService;
-    }
+    private final DocumentIngestionAsyncService documentIngestionAsyncService;
 
     /**
      * 处理文档摄入请求事件。
