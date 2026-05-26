@@ -36,7 +36,7 @@ public interface DocumentParser {
      * @param inputStream 文档文件的输入流，由调用方负责关闭
      * @return 解析后的纯文本内容
      * @throws com.argus.rag.common.exception.BusinessException 当解析过程发生错误时抛出，
-     *         异常消息应指明具体文档类型
+     *                                                          异常消息应指明具体文档类型
      */
     String parse(InputStream inputStream);
 }

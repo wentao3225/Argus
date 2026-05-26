@@ -19,13 +19,21 @@ import java.util.regex.Pattern;
  */
 @Component
 public class StructureAwareChunkTransformer implements DocumentTransformer {
-    /** 分块策略标识，写入分块元数据 */
+    /**
+     * 分块策略标识，写入分块元数据
+     */
     private static final String STRATEGY = "structure-aware-token-budget-v1";
-    /** 匹配连续空行，用于段落拆分 */
+    /**
+     * 匹配连续空行，用于段落拆分
+     */
     private static final Pattern BLANK_LINES = Pattern.compile("\\n\\s*\\n+");
-    /** 匹配 Markdown ATX 标题行 */
+    /**
+     * 匹配 Markdown ATX 标题行
+     */
     private static final Pattern HEADING = Pattern.compile("(?m)^(#{1,6})\\s+(.+)$");
-    /** 每 token 估算字符数（简化为 1:1） */
+    /**
+     * 每 token 估算字符数（简化为 1:1）
+     */
     private static final int CHARS_PER_TOKEN = 1;
     private final ChunkingProperties properties;
 
@@ -217,7 +225,10 @@ public class StructureAwareChunkTransformer implements DocumentTransformer {
         List<Document> chunks = new ArrayList<>();
         for (ChunkRange range : ranges) {
             int start = chunks.isEmpty() ? range.start() : overlapStart(range.start(), range.sectionStart());
-            Range chunkRange = trimRange(source.getText(), start, range.end());
+            Range chunkRange = null;
+            if (source.getText() != null) {
+                chunkRange = trimRange(source.getText(), start, range.end());
+            }
             if (chunkRange != null) {
                 chunks.add(buildDocument(source, chunkRange, range.path(), chunks.size()));
             }
@@ -227,18 +238,21 @@ public class StructureAwareChunkTransformer implements DocumentTransformer {
 
     // 构建单个分块 Document，设置元数据（章节路径、字符范围、策略标识）和带索引的 ID
     private Document buildDocument(Document source, Range range, String sectionPath, int chunkIndex) {
-        Map<String, Object> metadata = new LinkedHashMap<>();
-        if (source.getMetadata() != null) {
-            metadata.putAll(source.getMetadata());
-        }
+        Map<String, Object> metadata = new LinkedHashMap<>(source.getMetadata());
         metadata.put("sectionPath", sectionPath);
         metadata.put("charStart", range.start());
         metadata.put("charEnd", range.end());
         metadata.put("chunkStrategy", STRATEGY);
-        String id = source.getId() == null ? null : source.getId() + ":" + chunkIndex;
+        String id = source.getId() + ":" + chunkIndex;
+        if (source.getText() != null) {
+            return Document.builder()
+                    .id(id)
+                    .text(source.getText().substring(range.start(), range.end()))
+                    .metadata(metadata)
+                    .build();
+        }
         return Document.builder()
                 .id(id)
-                .text(source.getText().substring(range.start(), range.end()))
                 .metadata(metadata)
                 .build();
     }
@@ -270,9 +284,14 @@ public class StructureAwareChunkTransformer implements DocumentTransformer {
     }
 
     // 判断字符是否为中英文句子结束标点
-    private boolean isSentenceBoundary(char character) { return "。！？；!?;".indexOf(character) >= 0; }
+    private boolean isSentenceBoundary(char character) {
+        return "。！？；!?;".indexOf(character) >= 0;
+    }
+
     // 去除标题末尾的空白及可选 '#'
-    private String cleanHeading(String title) { return title.replaceAll("\\s+#*$", "").strip(); }
+    private String cleanHeading(String title) {
+        return title.replaceAll("\\s+#*$", "").strip();
+    }
 
     // 解析单行是否为 Markdown 标题，是则返回匹配结果
     private HeadingMatch parseHeading(String line, int start) {
@@ -307,30 +326,60 @@ public class StructureAwareChunkTransformer implements DocumentTransformer {
         while (index < line.length() && line.charAt(index) == ' ') index++;
         return index;
     }
+
     // 统计从指定位置起连续相同字符的长度
     private int fenceLength(String line, int start, char marker) {
         int index = start;
         while (index < line.length() && line.charAt(index) == marker) index++;
         return index - start;
     }
-    // 返回目标 token 数（最小为 1）
-    private int targetTokens() { return Math.max(1, properties.getTargetTokens()); }
-    // 返回最大 token 数（不小于目标值）
-    private int maxTokens() { return Math.max(targetTokens(), properties.getMaxTokens()); }
-    // 估算文本 token 数（简化字符数映射）
-    private int estimateTokens(String text) { return Math.max(1, text.length()); }
 
-    /** 标题匹配结果 */
-    private record HeadingMatch(int start, String title) {}
-    /** 文本起止范围 */
-    private record Range(int start, int end) {}
-    /** 代码块分隔符 */
-    private record Fence(char marker, int length) {}
-    /** 章节信息，含标题路径 */
+    // 返回目标 token 数（最小为 1）
+    private int targetTokens() {
+        return Math.max(1, properties.getTargetTokens());
+    }
+
+    // 返回最大 token 数（不小于目标值）
+    private int maxTokens() {
+        return Math.max(targetTokens(), properties.getMaxTokens());
+    }
+
+    // 估算文本 token 数（简化字符数映射）
+    private int estimateTokens(String text) {
+        return Math.max(1, text.length());
+    }
+
+    /**
+     * 标题匹配结果
+     */
+    private record HeadingMatch(int start, String title) {
+    }
+
+    /**
+     * 文本起止范围
+     */
+    private record Range(int start, int end) {
+    }
+
+    /**
+     * 代码块分隔符
+     */
+    private record Fence(char marker, int length) {
+    }
+
+    /**
+     * 章节信息，含标题路径
+     */
     private record Section(int start, int end, String path) {
         // 转换为分块范围
-        private ChunkRange toChunkRange() { return new ChunkRange(start, end, path, start); }
+        private ChunkRange toChunkRange() {
+            return new ChunkRange(start, end, path, start);
+        }
     }
-    /** 分块范围，记录所属章节路径和章节起始位置 */
-    private record ChunkRange(int start, int end, String path, int sectionStart) {}
+
+    /**
+     * 分块范围，记录所属章节路径和章节起始位置
+     */
+    private record ChunkRange(int start, int end, String path, int sectionStart) {
+    }
 }

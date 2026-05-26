@@ -1,7 +1,7 @@
 package com.argus.rag.ingestion.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,9 +14,6 @@ import java.util.Map;
  * 提供对 document_chunks 表的 CRUD 操作，包括按文档 ID 查询、
  * 删除旧切片和批量插入等功能。切片数据用于向量检索和全文搜索。
  * </p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 @Mapper
 public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
@@ -25,8 +22,8 @@ public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
     /**
      * 批量插入文档切片数据。
      *
-     * @param chunks
-     * @return
+     * @param chunks 切片数据列表
+     * @return 影响行数
      */
     int insertBatch(@Param("chunks") List<DocumentChunkEntity> chunks);
 

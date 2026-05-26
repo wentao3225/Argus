@@ -5,7 +5,6 @@ import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -59,28 +58,44 @@ import java.util.Map;
 public class ElasticsearchChunkIndexService {
 
 
-    /** HTTP 请求超时时间，平衡响应速度和 ES 集群压力 */
+    /**
+     * HTTP 请求超时时间，平衡响应速度和 ES 集群压力
+     */
     private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(5);
 
-    /** 关键词分数归一化的参考基准值，用于对数变换 */
+    /**
+     * 关键词分数归一化的参考基准值，用于对数变换
+     */
     private static final double KEYWORD_SCORE_REFERENCE = 100D;
 
-    /** ES 索引中文档切片的有效状态标识 */
+    /**
+     * ES 索引中文档切片的有效状态标识
+     */
     private static final String READY_STATUS = "READY";
 
-    /** JSON 序列化 / 反序列化工具 */
+    /**
+     * JSON 序列化 / 反序列化工具
+     */
     private final ObjectMapper objectMapper;
 
-    /** JDK 原生 HTTP 客户端，复用连接池 */
+    /**
+     * JDK 原生 HTTP 客户端，复用连接池
+     */
     private final HttpClient httpClient;
 
-    /** ES 基础 URL（scheme + host + port），如 {@code http://localhost:9200} */
+    /**
+     * ES 基础 URL（scheme + host + port），如 {@code http://localhost:9200}
+     */
     private final String baseUrl;
 
-    /** ES 索引名称 */
+    /**
+     * ES 索引名称
+     */
     private final String indexName;
 
-    /** 索引是否已初始化（volatile 保证多线程可见性） */
+    /**
+     * 索引是否已初始化（volatile 保证多线程可见性）
+     */
     private volatile boolean indexInitialized;
 
     /**

@@ -1,7 +1,6 @@
 package com.argus.rag.ingestion.service.pipeline.parser;
 
 import com.argus.rag.common.exception.BusinessException;
-import com.argus.rag.ingestion.service.pipeline.parser.*;
 import org.springframework.stereotype.Component;
 
 import java.util.LinkedHashMap;
@@ -37,7 +36,9 @@ import java.util.Map;
 @Component
 public class DocumentParserFactory {
 
-    /** 扩展名到解析器的映射表，保持注册顺序 */
+    /**
+     * 扩展名到解析器的映射表，保持注册顺序
+     */
     private final Map<String, DocumentParser> parserByExtension = new LinkedHashMap<>();
 
     /**

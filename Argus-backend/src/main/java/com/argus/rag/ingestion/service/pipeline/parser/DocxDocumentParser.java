@@ -32,9 +32,6 @@ import java.util.zip.ZipException;
  * </ul>
  * <p>所有异常统一包装为
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 public class DocxDocumentParser implements DocumentParser {
 
@@ -58,7 +55,7 @@ public class DocxDocumentParser implements DocumentParser {
      * @param inputStream DOCX 文件的输入流
      * @return 解析后的纯文本内容
      * @throws com.argus.rag.common.exception.BusinessException 当文件不是合法的 DOCX
-     *         格式或读取异常时抛出
+     *                                                          格式或读取异常时抛出
      */
     @Override
     public String parse(InputStream inputStream) {

@@ -3,7 +3,6 @@ package com.argus.rag.document.service;
 import com.argus.rag.common.enums.DocumentStatus;
 import com.argus.rag.document.mapper.DocumentMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
@@ -29,17 +28,21 @@ import java.time.LocalDateTime;
 @Slf4j
 public class StaleProcessingDocumentRecoveryRunner implements ApplicationRunner {
 
-    /** 默认失败原因：服务中断导致处理未完成 */
+    /**
+     * 默认失败原因：服务中断导致处理未完成
+     */
     private static final String DEFAULT_FAILURE_REASON = "文档处理任务因服务中断未完成，请重试。";
 
-    /** 文档数据访问 */
+    /**
+     * 文档数据访问
+     */
     private final DocumentMapper documentMapper;
 
     /**
      * 构造启动恢复组件。
      *
-     * @param documentMapper       文档数据访问层
-     * @param staleTimeoutMinutes  遗留超时阈值（分钟），可通过配置项覆盖，默认 30
+     * @param documentMapper      文档数据访问层
+     * @param staleTimeoutMinutes 遗留超时阈值（分钟），可通过配置项覆盖，默认 30
      */
     public StaleProcessingDocumentRecoveryRunner(
             DocumentMapper documentMapper,

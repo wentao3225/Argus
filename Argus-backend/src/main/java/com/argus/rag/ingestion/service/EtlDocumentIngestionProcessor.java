@@ -1,19 +1,19 @@
 package com.argus.rag.ingestion.service;
 
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.model.entity.DocumentEntity;
-import com.argus.rag.ingestion.service.pipeline.ChunkService;
+import com.argus.rag.engine.storage.ObjectStorageService;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
+import com.argus.rag.ingestion.service.pipeline.ChunkService;
 import com.argus.rag.ingestion.service.pipeline.parser.DocumentParserFactory;
 import com.argus.rag.ingestion.service.pipeline.reader.StoredObjectDocumentReader;
 import com.argus.rag.ingestion.service.pipeline.transformer.StructureAwareChunkTransformer;
 import com.argus.rag.ingestion.service.pipeline.transformer.TextCleanupTransformer;
 import com.argus.rag.ingestion.vector.VectorIngestionService;
-import com.argus.rag.engine.storage.ObjectStorageService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 
 import java.util.List;
@@ -46,65 +46,55 @@ import java.util.List;
  * @since 1.0.0
  */
 @Slf4j
+@RequiredArgsConstructor
 public class EtlDocumentIngestionProcessor implements DocumentIngestionProcessor {
 
 
-
-    /** 文档不存在时的错误消息 */
+    /**
+     * 文档不存在时的错误消息
+     */
     private static final String DOCUMENT_NOT_FOUND_MESSAGE = "待入库文档不存在";
 
-    /** 预览文本的最大长度 */
+    /**
+     * 预览文本的最大长度
+     */
     private static final int PREVIEW_MAX_LENGTH = 200;
 
-    /** 文档数据访问层 */
+    /**
+     * 文档数据访问层
+     */
     private final DocumentMapper documentMapper;
 
-    /** 对象存储服务 */
+    /**
+     * 对象存储服务
+     */
     private final ObjectStorageService storageService;
 
-    /** 文档解析器工厂 */
+    /**
+     * 文档解析器工厂
+     */
     private final DocumentParserFactory parserFactory;
 
-    /** 文本清洗转换器 */
+    /**
+     * 文本清洗转换器
+     */
     private final TextCleanupTransformer textCleanupTransformer;
 
-    /** 结构感知切片转换器 */
+    /**
+     * 结构感知切片转换器
+     */
     private final StructureAwareChunkTransformer chunkTransformer;
 
-    /** 切片存储服务 */
+    /**
+     * 切片存储服务
+     */
     private final ChunkService chunkService;
 
-    /** 向量写入服务 */
+    /**
+     * 向量写入服务
+     */
     private final VectorIngestionService vectorService;
 
-    /**
-     * 构造 ETL 文档摄入处理器。
-     *
-     * @param documentMapper          文档数据访问层
-     * @param storageService          对象存储服务
-     * @param parserFactory           文档解析器工厂
-     * @param textCleanupTransformer  文本清洗转换器
-     * @param chunkTransformer        结构感知切片转换器
-     * @param chunkService            切片存储服务
-     * @param vectorService           向量写入服务
-     */
-    public EtlDocumentIngestionProcessor(
-            DocumentMapper documentMapper,
-            ObjectStorageService storageService,
-            DocumentParserFactory parserFactory,
-            TextCleanupTransformer textCleanupTransformer,
-            StructureAwareChunkTransformer chunkTransformer,
-            ChunkService chunkService,
-            VectorIngestionService vectorService
-    ) {
-        this.documentMapper = documentMapper;
-        this.storageService = storageService;
-        this.parserFactory = parserFactory;
-        this.textCleanupTransformer = textCleanupTransformer;
-        this.chunkTransformer = chunkTransformer;
-        this.chunkService = chunkService;
-        this.vectorService = vectorService;
-    }
 
     /**
      * 执行完整的文档 ETL 流水线。
@@ -119,19 +109,26 @@ public class EtlDocumentIngestionProcessor implements DocumentIngestionProcessor
     @Override
     public void process(Long documentId, Long groupId) {
         log.info("开始执行文档ETL: documentId={}, groupId={}", documentId, groupId);
+        // 查找文档
         DocumentEntity documentEntity = findDocument(documentId, groupId);
+        // 先构造文档读取器
         StoredObjectDocumentReader reader =
                 new StoredObjectDocumentReader(storageService, parserFactory, documentEntity);
+        // 通过文档读取器获取文档
         List<Document> rawDocuments = reader.get();
         log.info("文档读取完成: documentId={}, groupId={}, rawDocuments={}",
                 documentId, groupId, rawDocuments.size());
+        // 清洗文本
         List<Document> cleanedDocuments = textCleanupTransformer.apply(rawDocuments);
         log.info("文本清洗完成: documentId={}, groupId={}, cleanedDocuments={}",
                 documentId, groupId, cleanedDocuments.size());
+        // 持久化预览文本
         persistPreviewText(documentId, groupId, cleanedDocuments);
+        // 切片
         List<Document> chunkDocuments = chunkTransformer.apply(cleanedDocuments);
         log.info("文档切片完成: documentId={}, groupId={}, chunkDocuments={}",
                 documentId, groupId, chunkDocuments.size());
+        // 持久化切片
         List<DocumentChunkEntity> chunks =
                 chunkService.saveChunkDocuments(documentId, groupId, chunkDocuments);
         log.info("切片落库完成: documentId={}, groupId={}, persistedChunks={}",

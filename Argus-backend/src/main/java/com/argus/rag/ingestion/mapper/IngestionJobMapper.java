@@ -1,7 +1,7 @@
 package com.argus.rag.ingestion.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.argus.rag.ingestion.model.entity.IngestionJobEntity;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,9 +14,6 @@ import java.util.List;
  * 提供对 {@code ingestion_jobs} 表的原子状态切换操作（认领/成功/失败），
  * 以及可运行任务查询。通用 insert / selectById 由 BaseMapper 提供。
  * </p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 @Mapper
 public interface IngestionJobMapper extends BaseMapper<IngestionJobEntity> {
@@ -56,11 +53,11 @@ public interface IngestionJobMapper extends BaseMapper<IngestionJobEntity> {
     /**
      * 将运行中任务标记为成功。
      *
-     * @param jobId            任务 ID
-     * @param runningStatus    预期的运行中状态值
-     * @param succeededStatus  要切换到的成功状态值
-     * @param workerId         执行该任务的 worker 标识
-     * @param finishedAt       任务完成时间
+     * @param jobId           任务 ID
+     * @param runningStatus   预期的运行中状态值
+     * @param succeededStatus 要切换到的成功状态值
+     * @param workerId        执行该任务的 worker 标识
+     * @param finishedAt      任务完成时间
      * @return 影响行数
      */
     int markSucceeded(
@@ -74,12 +71,12 @@ public interface IngestionJobMapper extends BaseMapper<IngestionJobEntity> {
     /**
      * 将运行中任务标记为失败并记录错误信息。
      *
-     * @param jobId          任务 ID
-     * @param runningStatus  预期的运行中状态值
-     * @param failedStatus   要切换到的失败状态值
-     * @param workerId       执行该任务的 worker 标识
-     * @param finishedAt     任务完成时间
-     * @param lastError      错误信息
+     * @param jobId         任务 ID
+     * @param runningStatus 预期的运行中状态值
+     * @param failedStatus  要切换到的失败状态值
+     * @param workerId      执行该任务的 worker 标识
+     * @param finishedAt    任务完成时间
+     * @param lastError     错误信息
      * @return 影响行数
      */
     int markFailed(

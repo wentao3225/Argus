@@ -17,34 +17,62 @@ import java.time.LocalDateTime;
 @TableName("ingestion_jobs")
 public class IngestionJobEntity {
 
-    /** 任务主键 */
+    /**
+     * 任务主键
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
-    /** 关联的文档 ID */
+    /**
+     * 关联的文档 ID
+     */
     private Long documentId;
-    /** 关联的知识库 ID */
+    /**
+     * 关联的知识库 ID
+     */
     private Long groupId;
-    /** 任务类型 */
+    /**
+     * 任务类型
+     */
     private String jobType;
-    /** 任务状态 */
+    /**
+     * 任务状态
+     */
     private String status;
-    /** 当前重试次数 */
+    /**
+     * 当前重试次数
+     */
     private Integer retryCount;
-    /** 最大重试次数 */
+    /**
+     * 最大重试次数
+     */
     private Integer maxRetries;
-    /** 执行该任务的 Worker 标识 */
+    /**
+     * 执行该任务的 Worker 标识
+     */
     private String workerId;
-    /** 任务开始时间 */
+    /**
+     * 任务开始时间
+     */
     private LocalDateTime startedAt;
-    /** 任务完成时间 */
+    /**
+     * 任务完成时间
+     */
     private LocalDateTime finishedAt;
-    /** 下次重试时间 */
+    /**
+     * 下次重试时间
+     */
     private LocalDateTime nextRetryAt;
-    /** 最近一次失败的错误信息 */
+    /**
+     * 最近一次失败的错误信息
+     */
     private String lastError;
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createdAt;
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 
 }

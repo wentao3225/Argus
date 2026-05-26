@@ -9,6 +9,7 @@ import com.argus.rag.ingestion.mapper.DocumentChunkMapper;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.retry.annotation.Backoff;
 import org.springframework.retry.annotation.Recover;
@@ -32,12 +33,10 @@ import java.util.List;
  *
  * <p>通过 {@link Retryable} 注解支持失败自动重试（最多 3 次，退避策略：2s / 4s / 8s）。
  * 全部重试失败后由 {@link #recover} 方法将文档标记为 FAILED。
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class DocumentIngestionAsyncService {
 
     /**
@@ -65,29 +64,6 @@ public class DocumentIngestionAsyncService {
      * Elasticsearch chunk 索引服务
      */
     private final ElasticsearchChunkIndexService elasticsearchChunkIndexService;
-
-    /**
-     * 构造异步 ETL 服务，注入所有依赖。
-     *
-     * @param documentMapper                 文档数据访问层
-     * @param documentIngestionProcessor     文档分块处理引擎
-     * @param documentChunkMapper            文档分块数据访问层
-     * @param vectorIngestionService         向量导入服务
-     * @param elasticsearchChunkIndexService ES chunk 索引服务
-     */
-    public DocumentIngestionAsyncService(
-            DocumentMapper documentMapper,
-            DocumentIngestionProcessor documentIngestionProcessor,
-            DocumentChunkMapper documentChunkMapper,
-            VectorIngestionService vectorIngestionService,
-            ElasticsearchChunkIndexService elasticsearchChunkIndexService
-    ) {
-        this.documentMapper = documentMapper;
-        this.documentIngestionProcessor = documentIngestionProcessor;
-        this.documentChunkMapper = documentChunkMapper;
-        this.vectorIngestionService = vectorIngestionService;
-        this.elasticsearchChunkIndexService = elasticsearchChunkIndexService;
-    }
 
     /**
      * 异步执行文档 ETL 流程。
@@ -166,11 +142,13 @@ public class DocumentIngestionAsyncService {
     private void cleanupProcessingArtifacts(Long documentId) {
         log.info("开始清理上次处理中间产物: documentId={}", documentId);
         try {
+            // 删除指定文档的所有切片记录
             documentChunkMapper.deleteByDocumentId(documentId);
         } catch (RuntimeException exception) {
             log.warn("清理旧 chunk 失败: documentId={}, reason={}", documentId, exception.getMessage());
         }
         try {
+            // 删除指定文档在向量库中的所有向量记录
             vectorIngestionService.deleteDocumentVectors(documentId);
         } catch (RuntimeException exception) {
             log.warn("清理旧向量失败: documentId={}, reason={}", documentId, exception.getMessage());
