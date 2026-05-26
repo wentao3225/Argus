@@ -1,5 +1,7 @@
 package com.argus.rag.ingestion.service.pipeline.parser;
 
+import org.springframework.stereotype.Component;
+
 import java.io.InputStream;
 
 /**
@@ -32,6 +34,7 @@ import java.io.InputStream;
  * <p>如果编码检测失败或读取异常，将抛出包含 "Markdown 文档解析失败" 消息的
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
  */
+@Component
 public class MdDocumentParser implements DocumentParser {
 
     /**

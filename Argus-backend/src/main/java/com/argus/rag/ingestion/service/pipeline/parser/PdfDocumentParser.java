@@ -3,6 +3,7 @@ package com.argus.rag.ingestion.service.pipeline.parser;
 import com.argus.rag.common.exception.BusinessException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,7 @@ import java.io.InputStream;
  * （如 {@link IOException}），解析器统一包装为包含 "PDF 文档解析失败" 消息的
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
  */
+@Component
 public class PdfDocumentParser implements DocumentParser {
 
     /**

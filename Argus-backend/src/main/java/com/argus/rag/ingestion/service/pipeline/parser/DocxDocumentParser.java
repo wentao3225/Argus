@@ -4,6 +4,7 @@ import com.argus.rag.common.exception.BusinessException;
 import org.apache.poi.openxml4j.exceptions.NotOfficeXmlFileException;
 import org.apache.poi.xwpf.extractor.XWPFWordExtractor;
 import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -33,6 +34,7 @@ import java.util.zip.ZipException;
  * <p>所有异常统一包装为
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
  */
+@Component
 public class DocxDocumentParser implements DocumentParser {
 
     /**
