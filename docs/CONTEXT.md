@@ -28,6 +28,10 @@
 	- 后端分片上传链路是完整的，核心在 [Argus-backend/src/main/java/com/argus/rag/document/service/DocumentUploadService.java](Argus-backend/src/main/java/com/argus/rag/document/service/DocumentUploadService.java) 和 upload session / chunk 相关 mapper。
 	- 前端 API 层已经定义了 init / chunk / complete 三段式接口，见 [Argus-frontend/src/api/document.ts](Argus-frontend/src/api/document.ts)。
 	- 但当前页面主入口 [Argus-frontend/src/views/documents/components/UploadDialog.vue](Argus-frontend/src/views/documents/components/UploadDialog.vue) 实际接入的仍是 10MB 内直接上传，尚未看到真正把 File 切片并调分片接口的页面逻辑。
+- 已完成 ingestion 相关一轮轻量代码收口：
+	- 当前实现中已移除 `ingestion_jobs` 相关表/实体/mapper/枚举，统一收口到 Spring 事件驱动的异步摄入链路。
+	- `DocumentParserFactory` 已从较重的注册表思路收口为“简单工厂 + 策略模式”：`DocumentParser` 作为策略接口，各类 parser 作为具体策略实现，工厂基于扩展名选择策略。
+	- 已同步更新当前态文档，避免源码和模块文档口径继续偏差。
 
 ## 4. 当前已验证的代码状态
 
@@ -41,6 +45,12 @@
 - 上传完成后 documents 表里的文档先进入 PROCESSING，不会直接变成 READY；READY 由异步 ingestion / ETL 完成后统一回写。
 - 异步衔接方式已经确认：上传事务提交后发布 [Argus-backend/src/main/java/com/argus/rag/document/service/DocumentIngestionRequestedEvent.java](Argus-backend/src/main/java/com/argus/rag/document/service/DocumentIngestionRequestedEvent.java)，由 [Argus-backend/src/main/java/com/argus/rag/document/service/DocumentIngestionAsyncListener.java](Argus-backend/src/main/java/com/argus/rag/document/service/DocumentIngestionAsyncListener.java) 在 AFTER_COMMIT 阶段异步启动处理。
 - 当前还确认了一个实现细节：启动恢复组件 [Argus-backend/src/main/java/com/argus/rag/document/service/StaleProcessingDocumentRecoveryRunner.java](Argus-backend/src/main/java/com/argus/rag/document/service/StaleProcessingDocumentRecoveryRunner.java) 虽然注入了 processing-timeout-minutes 配置，但当前调用 SQL 时没有传入超时边界，现状更像“启动时回收所有遗留 PROCESSING 文档”。
+- 当前仓库中已不再保留 `ingestion_jobs` 相关运行时代码与 schema 定义；当前摄入口径应统一描述为 Spring 事件 + `@Async` + `@Retryable`。
+- parser 层当前实现已经调整为：
+	- `DocumentParser` 是解析策略接口。
+	- `Txt / Md / Pdf / DocxDocumentParser` 是具体策略实现。
+	- `DocumentParserFactory` 是简单工厂，通过 Spring 注入的 `List<DocumentParser>` 按扩展名调用 `supports()` 选择解析器。
+- 后端已执行 `mvn -q -DskipTests compile` 编译验证通过；parser 相关改动文件无 IDE 诊断错误。
 
 ## 5. 当前阶段结论
 
@@ -50,6 +60,8 @@
 - upload 模块现阶段也可以先收住，已经达到“主链路能讲、关键类能定位、工程价值能解释”的程度。
 - 对 upload 最值得保留的表达是：会话化上传、秒传复用、断点续传、分片幂等、上传与 ETL 解耦、失败后可重试。
 - 对 upload 里需要收口的点是：不要把当前项目讲成前端已经完整交付了大文件分片产品体验；更准确的说法是后端能力完整、前端页面主入口当前主要还是直传。
+- ingestion 当前更适合保留的表达是：事务后事件驱动、异步 ETL、状态化失败收口、chunk 资产化、向量与关键词索引同步，而不是“任务表 Worker 调度”。
+- parser 这一层当前最稳妥的讲法是：“简单工厂 + 策略模式按扩展名选择解析器”，不要再沿用“扩展名注册表”或“自动发现式注册中心”那套口径。
 
 ## 6. 下一步优先级
 
@@ -57,9 +69,11 @@
 - 重点搞清：对象存储原文如何读取、不同文件格式如何解析、文本清洗和 preview_text 如何生成、chunk 如何切分并落库、向量和关键词索引如何写入、READY / FAILED 状态如何回写。
 - 这一阶段的目标是把“为什么上传完成后还要经历 PROCESSING”讲清楚，也就是把 upload 的后半段真正补齐。
 - ingestion 梳理完成后，下一跳优先看 retrieval，这样就能把“文档如何进入知识库”和“问答如何取回知识”连成一条完整主链路。
+- 当前 ingestion 阅读时，需要按最新代码口径理解：不再有 `ingestion_jobs` 分支；parser 选择逻辑是简单工厂 + 策略，不是扩展名映射注册表。
 
 ## 7. 新对话接手建议
 
 - 默认从 ingestion async service / processor / parser / chunk / vector 相关代码开始，不要重新花太多时间回到 auth 或 upload 概念介绍。
 - 输出优先给：主链路、关键类定位、适合写进简历的工程点、需要收口的表述。
 - 不要默认 Elasticsearch 必须保留；后续如果需要轻量化，可以保留“混合检索”思路，但替换为更轻的关键词检索实现。
+- 若后续继续看文档，优先以当前态模块文档为准；带 `V1.0`、`V2.0` 的文档默认视为历史阶段记录，不直接作为当前实现口径。
