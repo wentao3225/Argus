@@ -58,11 +58,19 @@
 - parser 采用简单工厂 + 策略模式，切片采用结构感知分层切片，主链路和表达口径已与源码和文档同步。
 - 切片方案优先保留文档结构，逐级降级，合并碎片，带 overlap 和元数据，适合当前项目工程目标。
 
-## 6. 下一步优先级
 
-- ingestion 已梳理到切片主逻辑，下一步建议继续看 ChunkService（切片落库）、vector/索引写入、READY/FAILED 状态回写。
-- ingestion 梳理完成后，优先看 retrieval，串联“文档如何进入知识库”与“问答如何取回知识”。
-- 阅读和表达时，优先以当前态源码和 docs/ingestion/文档切片实现详解.md 为准。
+## 6. 阶段进展与下一步优先级（2026-05-27 更新）
+
+- ingestion 全链路已系统梳理，已陪跑到 markDocumentStatus（文档状态回写）及其相关主逻辑。
+- 当前 ingestion 主链路：上传/分片/解析/切片/落库/向量写入/状态回写，源码与文档已同步。
+- 下一步建议：
+	1. 梳理 ingestion 结束后 retrieval（检索/召回）主链路，理解“文档如何被问答/检索取回”。
+	2. 梳理 retrieval 相关主类（如 RetrievalService、QueryService、向量检索与 rerank 逻辑）。
+	3. 梳理前端问答主链路，串联“上传-摄入-检索-问答”全链路。
+	4. 如需面试/讲解，优先准备 ingestion+retrieval 的主链路讲稿和追问口径。
+
+> 阶段性结论：
+> ingestion 端已收口，retrieval 是下一个主线。
 
 ## 7. 新对话接手建议
 
