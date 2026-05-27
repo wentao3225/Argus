@@ -29,7 +29,7 @@ public class QaChatClientConfiguration {
      *
      * @param chatClientBuilder      Spring AI 提供的 ChatClient 构造器
      * @param qaSystemPromptTemplate 系统提示词模板，定义模型的角色和回答规范
-     * @param qaRetrievalAdvisor      RAG 检索增强顾问
+     * @param qaRetrievalAdvisor     RAG 检索增强顾问
      * @return 配置完成的 ChatClient 实例
      */
     @Bean

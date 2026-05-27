@@ -1,6 +1,7 @@
 package com.argus.rag.qa.rag;
 
 import com.argus.rag.common.exception.BusinessException;
+import org.jspecify.annotations.NonNull;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.rag.Query;
 import org.springframework.ai.rag.retrieval.search.DocumentRetriever;
@@ -20,13 +21,18 @@ import java.util.List;
 @Component
 public class ReadyChunkDocumentRetriever implements DocumentRetriever {
 
-    /** 默认返回的检索结果数量 */
-    private static final int DEFAULT_TOP_K = 5;
-    /** 上下文中群组 ID 的键名 */
-    private static final String GROUP_ID_CONTEXT_KEY = "groupId";
-    /** 上下文中预取文档列表的键名，用于避免重复检索 */
+    /**
+     * 上下文中预取文档列表的键名，用于避免重复检索
+     */
     public static final String PREFETCHED_DOCUMENTS_CONTEXT_KEY = "qaRetrievedDocuments";
-
+    /**
+     * 默认返回的检索结果数量
+     */
+    private static final int DEFAULT_TOP_K = 5;
+    /**
+     * 上下文中群组 ID 的键名
+     */
+    private static final String GROUP_ID_CONTEXT_KEY = "groupId";
     private final HybridChunkRetrievalService hybridChunkRetrievalService;
     private final int topK;
 
@@ -64,7 +70,7 @@ public class ReadyChunkDocumentRetriever implements DocumentRetriever {
      * @return 检索到的文档列表
      */
     @Override
-    public List<Document> retrieve(Query query) {
+    public @NonNull List<Document> retrieve(@NonNull Query query) {
         Query validQuery = requireQuery(query);
         Long groupId = requireGroupId(validQuery);
         List<Document> prefetchedDocuments = readPrefetchedDocuments(validQuery);
@@ -96,7 +102,9 @@ public class ReadyChunkDocumentRetriever implements DocumentRetriever {
         return hybridChunkRetrievalService.retrieve(groupId, question, topK);
     }
 
-    /** 校验检索请求非空 */
+    /**
+     * 校验检索请求非空
+     */
     private Query requireQuery(Query query) {
         if (query == null) {
             throw new BusinessException("检索请求不能为空");
@@ -104,7 +112,9 @@ public class ReadyChunkDocumentRetriever implements DocumentRetriever {
         return query;
     }
 
-    /** 从检索上下文中提取并校验 groupId */
+    /**
+     * 从检索上下文中提取并校验 groupId
+     */
     private Long requireGroupId(Query query) {
         Object groupId = query.context().get(GROUP_ID_CONTEXT_KEY);
         if (groupId instanceof Number) {
@@ -120,7 +130,9 @@ public class ReadyChunkDocumentRetriever implements DocumentRetriever {
         throw new BusinessException("检索上下文缺少 groupId");
     }
 
-    /** 尝试从上下文中读取预取的文档列表，若不存在则返回 {@code null} */
+    /**
+     * 尝试从上下文中读取预取的文档列表，若不存在则返回 {@code null}
+     */
     private List<Document> readPrefetchedDocuments(Query query) {
         Object documents = query.context().get(PREFETCHED_DOCUMENTS_CONTEXT_KEY);
         if (documents == null) {
@@ -139,7 +151,9 @@ public class ReadyChunkDocumentRetriever implements DocumentRetriever {
         return List.copyOf(castedDocuments);
     }
 
-    /** 校验 groupId 为正数 */
+    /**
+     * 校验 groupId 为正数
+     */
     private Long requirePositiveGroupId(long groupId) {
         if (groupId <= 0) {
             throw new BusinessException("groupId 非法");
