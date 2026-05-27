@@ -140,7 +140,7 @@ public class ChunkService {
      */
     private void validateIdentifiers(Long documentId, Long groupId) {
         if (documentId == null || groupId == null) {
-            throw new BusinessException("切片前必须提供 documentId 和 groupId");
+            throw new BusinessException("持久化切片前必须提供 documentId 和 groupId");
         }
     }
 
