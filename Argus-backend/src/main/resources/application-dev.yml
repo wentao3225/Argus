@@ -62,12 +62,6 @@ rag:
     refresh-cookie-name: ARGUS_DD_RAG_REFRESH_TOKEN
     refresh-cookie-secure: false
 
-elasticsearch:
-  host: ${ES_HOST:localhost}
-  port: ${ES_PORT:9200}
-  scheme: ${ES_SCHEME:http}
-  index-name: dd_rag_document_chunks
-
 ingestion:
   chunking:
     target-tokens: 240

@@ -4,9 +4,8 @@ import com.argus.rag.common.enums.DocumentStatus;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.model.entity.DocumentEntity;
-import com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService;
+import com.argus.rag.engine.search.PgKeywordSearchService;
 import com.argus.rag.ingestion.mapper.DocumentChunkMapper;
-import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
@@ -18,7 +17,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
  * 异步文档 ETL（提取-转换-加载）服务。
@@ -27,7 +25,6 @@ import java.util.List;
  * <ol>
  *   <li>清理上一次处理的中间产物（chunk、向量、ES 索引）</li>
  *   <li>调用 {@link DocumentIngestionProcessor} 进行文档解析和分块</li>
- *   <li>将分块索引同步至 Elasticsearch</li>
  *   <li>将文档状态更新为 READY</li>
  * </ol>
  *
@@ -63,7 +60,7 @@ public class DocumentIngestionAsyncService {
     /**
      * Elasticsearch chunk 索引服务
      */
-    private final ElasticsearchChunkIndexService elasticsearchChunkIndexService;
+    private final PgKeywordSearchService pgKeywordSearchService;
 
     /**
      * 异步执行文档 ETL 流程。
@@ -87,7 +84,6 @@ public class DocumentIngestionAsyncService {
         log.info("开始异步执行文档ETL: documentId={}, groupId={}", documentId, groupId);
         cleanupProcessingArtifacts(documentId);
         documentIngestionProcessor.process(documentId, groupId);
-        syncSearchIndex(document);
         markDocumentStatus(documentId, groupId, DocumentStatus.READY.name(), null, LocalDateTime.now());
         log.info("异步文档ETL完成: documentId={}, groupId={}, status={}", documentId, groupId, DocumentStatus.READY.name());
     }
@@ -153,24 +149,7 @@ public class DocumentIngestionAsyncService {
         } catch (RuntimeException exception) {
             log.warn("清理旧向量失败: documentId={}, reason={}", documentId, exception.getMessage());
         }
-        try {
-            elasticsearchChunkIndexService.deleteDocumentChunks(documentId);
-        } catch (RuntimeException exception) {
-            log.warn("清理旧 ES 索引失败: documentId={}, reason={}", documentId, exception.getMessage());
-        }
         log.info("中间产物清理完成: documentId={}", documentId);
-    }
-
-    /**
-     * 将文档的分块数据同步到 Elasticsearch 搜索索引。
-     *
-     * @param document 文档实体
-     */
-    private void syncSearchIndex(DocumentEntity document) {
-        log.info("开始同步ES搜索索引: documentId={}, fileName={}", document.getId(), document.getFileName());
-        List<DocumentChunkEntity> chunks = documentChunkMapper.selectByDocumentId(document.getId());
-        elasticsearchChunkIndexService.indexReadyChunks(document.getFileName(), chunks);
-        log.info("ES搜索索引同步完成: documentId={}, indexedChunks={}", document.getId(), chunks.size());
     }
 
     /**

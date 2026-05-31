@@ -1,15 +1,14 @@
 package com.argus.rag.qa.rag;
 
 import com.argus.rag.common.exception.BusinessException;
+import com.argus.rag.engine.pgvector.PgVectorRetrievalAdapter;
+import com.argus.rag.engine.search.PgKeywordSearchService;
 import com.argus.rag.ingestion.mapper.DocumentChunkMapper;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.argus.rag.qa.model.EvidenceLevel;
 import com.argus.rag.qa.model.QueryPlanResult;
 import com.argus.rag.qa.service.QueryPlanningService;
-import com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService;
-import com.argus.rag.engine.pgvector.PgVectorRetrievalAdapter;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -38,9 +37,13 @@ import java.util.*;
 @Slf4j
 public class HybridChunkRetrievalService {
 
-    /** 默认邻居窗口大小（向前向后各扩展的切片数） */
+    /**
+     * 默认邻居窗口大小（向前向后各扩展的切片数）
+     */
     private static final int DEFAULT_NEIGHBOR_WINDOW = 1;
-    /** 每个检索通道返回的最大候选数 */
+    /**
+     * 每个检索通道返回的最大候选数
+     */
     private static final int CHANNEL_TOP_K = 50;
     /**
      * RRF 融合算法的 k 参数。
@@ -48,15 +51,26 @@ public class HybridChunkRetrievalService {
      */
     private static final int RRF_K = 0;
 
-    /** 向量检索适配器 */
+    /**
+     * 向量检索适配器
+     */
     private final PgVectorRetrievalAdapter vectorRetrievalAdapter;
-    /** Elasticsearch 关键词检索服务 */
-    private final ElasticsearchChunkIndexService elasticsearchChunkIndexService;
-    /** 文档切片数据访问层 */
+
+    /**
+     * Pg 关键词检索服务
+     */
+    private final PgKeywordSearchService pgKeywordSearchService;
+    /**
+     * 文档切片数据访问层
+     */
     private final DocumentChunkMapper documentChunkMapper;
-    /** 查询规划服务 */
+    /**
+     * 查询规划服务
+     */
     private final QueryPlanningService queryPlanningService;
-    /** 邻居窗口大小 */
+    /**
+     * 邻居窗口大小
+     */
     private final int neighborWindow;
 
     /**
@@ -65,12 +79,12 @@ public class HybridChunkRetrievalService {
     @Autowired
     public HybridChunkRetrievalService(
             PgVectorRetrievalAdapter vectorRetrievalAdapter,
-            ElasticsearchChunkIndexService elasticsearchChunkIndexService,
+            PgKeywordSearchService pgKeywordSearchService,
             DocumentChunkMapper documentChunkMapper,
             QueryPlanningService queryPlanningService) {
         this(
                 vectorRetrievalAdapter,
-                elasticsearchChunkIndexService,
+                pgKeywordSearchService,
                 documentChunkMapper,
                 queryPlanningService,
                 DEFAULT_NEIGHBOR_WINDOW);
@@ -81,12 +95,12 @@ public class HybridChunkRetrievalService {
      */
     public HybridChunkRetrievalService(
             PgVectorRetrievalAdapter vectorRetrievalAdapter,
-            ElasticsearchChunkIndexService elasticsearchChunkIndexService,
+            PgKeywordSearchService pgKeywordSearchService,
             DocumentChunkMapper documentChunkMapper,
             QueryPlanningService queryPlanningService,
             int neighborWindow) {
         this.vectorRetrievalAdapter = vectorRetrievalAdapter;
-        this.elasticsearchChunkIndexService = elasticsearchChunkIndexService;
+        this.pgKeywordSearchService = pgKeywordSearchService;
         this.documentChunkMapper = documentChunkMapper;
         this.queryPlanningService = queryPlanningService;
         this.neighborWindow = Math.max(0, neighborWindow);
@@ -173,7 +187,9 @@ public class HybridChunkRetrievalService {
         return new RetrievedEvidenceBundle(documents, evidenceLevel, buildEvidenceGuidance(evidenceLevel));
     }
 
-    /** 合并向量检索结果到候选集合，累加 RRF 评分 */
+    /**
+     * 合并向量检索结果到候选集合，累加 RRF 评分
+     */
     private void mergeVectorHits(
             Map<Long, RetrievalCandidate> candidates,
             Long groupId,
@@ -189,15 +205,17 @@ public class HybridChunkRetrievalService {
         }
     }
 
-    /** 合并关键词检索结果到候选集合，累加 RRF 评分 */
+    /**
+     * 合并关键词检索结果到候选集合，累加 RRF 评分
+     */
     private void mergeKeywordHits(
             Map<Long, RetrievalCandidate> candidates,
             Long groupId,
             String query) {
-        List<ElasticsearchChunkIndexService.KeywordHit> keywordHits = elasticsearchChunkIndexService.search(groupId,
+        List<PgKeywordSearchService.KeywordHit> keywordHits = pgKeywordSearchService.search(groupId,
                 query, CHANNEL_TOP_K);
         for (int index = 0; index < keywordHits.size(); index++) {
-            ElasticsearchChunkIndexService.KeywordHit hit = keywordHits.get(index);
+            PgKeywordSearchService.KeywordHit hit = keywordHits.get(index);
             RetrievalCandidate candidate = candidates.computeIfAbsent(
                     hit.chunkId(),
                     ignored -> RetrievalCandidate.fromKeywordHit(hit));
@@ -205,7 +223,9 @@ public class HybridChunkRetrievalService {
         }
     }
 
-    /** 将数据库查询结果按 chunkId 索引，便于快速查找 */
+    /**
+     * 将数据库查询结果按 chunkId 索引，便于快速查找
+     */
     private Map<Long, Map<String, Object>> indexRows(List<Map<String, Object>> rows) {
         Map<Long, Map<String, Object>> rowByChunkId = new LinkedHashMap<>();
         for (Map<String, Object> row : rows) {
@@ -214,7 +234,9 @@ public class HybridChunkRetrievalService {
         return rowByChunkId;
     }
 
-    /** 将检索候选和数据库数据组装为 Spring AI 的 Document 对象 */
+    /**
+     * 将检索候选和数据库数据组装为 Spring AI 的 Document 对象
+     */
     private Document toDocument(
             String evidenceId,
             Map<String, Object> row,
@@ -255,7 +277,9 @@ public class HybridChunkRetrievalService {
                 .build();
     }
 
-    /** 构建证据窗口文本：根据聚类的切片范围和邻居窗口拼接切片文本 */
+    /**
+     * 构建证据窗口文本：根据聚类的切片范围和邻居窗口拼接切片文本
+     */
     private String buildEvidenceWindow(
             Map<String, Object> row,
             RetrievalCluster cluster,
@@ -289,7 +313,9 @@ public class HybridChunkRetrievalService {
         return "文件名：" + fileName + "\n" + builder;
     }
 
-    /** 将候选切片聚合为类簇：同一文档中连续的切片合并为一个类簇 */
+    /**
+     * 将候选切片聚合为类簇：同一文档中连续的切片合并为一个类簇
+     */
     private List<RetrievalCluster> buildClusters(List<RetrievalCandidate> rankedCandidates) {
         Map<Long, List<RetrievalCandidate>> candidatesByDocumentId = new LinkedHashMap<>();
         for (RetrievalCandidate candidate : rankedCandidates) {
@@ -317,7 +343,9 @@ public class HybridChunkRetrievalService {
                 .toList();
     }
 
-    /** 评估检索结果的证据充分度等级 */
+    /**
+     * 评估检索结果的证据充分度等级
+     */
     private EvidenceLevel evaluateEvidenceLevel(List<Document> documents) {
         if (documents.isEmpty()) {
             return EvidenceLevel.NONE;
@@ -344,7 +372,9 @@ public class HybridChunkRetrievalService {
         return EvidenceLevel.WEAK;
     }
 
-    /** 根据证据等级生成对应的回答指导语 */
+    /**
+     * 根据证据等级生成对应的回答指导语
+     */
     private String buildEvidenceGuidance(EvidenceLevel evidenceLevel) {
         return switch (evidenceLevel) {
             case NONE -> "当前没有可用证据，必须直接拒答。";
@@ -378,7 +408,9 @@ public class HybridChunkRetrievalService {
         return 1.0 - Math.exp(-rawRrfScore);
     }
 
-    /** 从 Row Map 中获取值，支持驼峰和小写两种键名 */
+    /**
+     * 从 Row Map 中获取值，支持驼峰和小写两种键名
+     */
     private Object getValue(Map<String, Object> row, String field) {
         Object value = row.get(field);
         if (value != null) {
@@ -387,7 +419,9 @@ public class HybridChunkRetrievalService {
         return row.get(field.toLowerCase());
     }
 
-    /** 校验 groupId 为正数 */
+    /**
+     * 校验 groupId 为正数
+     */
     private Long requirePositiveGroupId(Long groupId) {
         if (groupId == null || groupId <= 0) {
             throw new BusinessException("groupId 非法");
@@ -395,7 +429,9 @@ public class HybridChunkRetrievalService {
         return groupId;
     }
 
-    /** 校验问题非空并 trim */
+    /**
+     * 校验问题非空并 trim
+     */
     private String requireQuestion(String question) {
         if (!StringUtils.hasText(question)) {
             throw new BusinessException("问题不能为空");
@@ -403,7 +439,9 @@ public class HybridChunkRetrievalService {
         return question.trim();
     }
 
-    /** 安全转换为 Long，失败时抛出业务异常 */
+    /**
+     * 安全转换为 Long，失败时抛出业务异常
+     */
     private Long requireLong(Object value, String field) {
         if (value instanceof Number number) {
             return number.longValue();
@@ -411,7 +449,9 @@ public class HybridChunkRetrievalService {
         throw new BusinessException("检索结果缺少字段: " + field);
     }
 
-    /** 安全转换为 Integer，失败时抛出业务异常 */
+    /**
+     * 安全转换为 Integer，失败时抛出业务异常
+     */
     private Integer requireInteger(Object value, String field) {
         if (value instanceof Number number) {
             return number.intValue();
@@ -419,7 +459,9 @@ public class HybridChunkRetrievalService {
         throw new BusinessException("检索结果缺少字段: " + field);
     }
 
-    /** 安全转换为非空字符串，失败时抛出业务异常 */
+    /**
+     * 安全转换为非空字符串，失败时抛出业务异常
+     */
     private String requireText(Object value, String field) {
         if (value instanceof String text && StringUtils.hasText(text)) {
             return text.trim();
@@ -435,21 +477,37 @@ public class HybridChunkRetrievalService {
      */
     static final class RetrievalCandidate {
 
-        /** 所属文档 ID */
+        /**
+         * 所属文档 ID
+         */
         private final Long documentId;
-        /** 切片 ID */
+        /**
+         * 切片 ID
+         */
         private final Long chunkId;
-        /** 切片在文档中的序号 */
+        /**
+         * 切片在文档中的序号
+         */
         private final Integer chunkIndex;
-        /** 向量检索评分（取多次命中的最大值） */
+        /**
+         * 向量检索评分（取多次命中的最大值）
+         */
         private double vectorScore;
-        /** 关键词检索评分（取多次命中的最大值） */
+        /**
+         * 关键词检索评分（取多次命中的最大值）
+         */
         private double keywordScore;
-        /** RRF 融合评分（累加值） */
+        /**
+         * RRF 融合评分（累加值）
+         */
         private double rankingScore;
-        /** 是否在向量检索中命中 */
+        /**
+         * 是否在向量检索中命中
+         */
         private boolean vectorMatched;
-        /** 是否在关键词检索中命中 */
+        /**
+         * 是否在关键词检索中命中
+         */
         private boolean keywordMatched;
 
         private RetrievalCandidate(Long documentId, Long chunkId, Integer chunkIndex) {
@@ -458,25 +516,33 @@ public class HybridChunkRetrievalService {
             this.chunkIndex = chunkIndex;
         }
 
-        /** 从向量检索命中结果创建候选项 */
+        /**
+         * 从向量检索命中结果创建候选项
+         */
         static RetrievalCandidate fromVectorHit(PgVectorRetrievalAdapter.VectorHit hit) {
             return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex());
         }
 
-        /** 从关键词检索命中结果创建候选项 */
-        static RetrievalCandidate fromKeywordHit(ElasticsearchChunkIndexService.KeywordHit hit) {
+        /**
+         * 从关键词检索命中结果创建候选项
+         */
+        static RetrievalCandidate fromKeywordHit(PgKeywordSearchService.KeywordHit hit) {
             return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex());
         }
 
-        /** 合并向量检索命中：更新评分并累加 RRF 分数 */
+        /**
+         * 合并向量检索命中：更新评分并累加 RRF 分数
+         */
         void mergeVectorHit(PgVectorRetrievalAdapter.VectorHit hit, int rank) {
             this.vectorMatched = true;
             this.vectorScore = Math.max(this.vectorScore, hit.score());
             this.rankingScore += reciprocalRank(rank);
         }
 
-        /** 合并关键词检索命中：更新评分并累加 RRF 分数 */
-        void mergeKeywordHit(ElasticsearchChunkIndexService.KeywordHit hit, int rank) {
+        /**
+         * 合并关键词检索命中：更新评分并累加 RRF 分数
+         */
+        void mergeKeywordHit(PgKeywordSearchService.KeywordHit hit, int rank) {
             this.keywordMatched = true;
             this.keywordScore = Math.max(this.keywordScore, hit.normalizedScore());
             this.rankingScore += reciprocalRank(rank);
@@ -506,7 +572,9 @@ public class HybridChunkRetrievalService {
             return rankingScore;
         }
 
-        /** 获取检索来源：BOTH（双通道）、VECTOR 或 KEYWORD */
+        /**
+         * 获取检索来源：BOTH（双通道）、VECTOR 或 KEYWORD
+         */
         String source() {
             if (vectorMatched && keywordMatched) {
                 return "BOTH";
@@ -514,7 +582,9 @@ public class HybridChunkRetrievalService {
             return vectorMatched ? "VECTOR" : "KEYWORD";
         }
 
-        /** 计算 RRF 倒数排名分数：1 / (k + rank) */
+        /**
+         * 计算 RRF 倒数排名分数：1 / (k + rank)
+         */
         private double reciprocalRank(int rank) {
             return 1D / (RRF_K + Math.max(rank, 1));
         }
@@ -528,25 +598,45 @@ public class HybridChunkRetrievalService {
      */
     static final class RetrievalCluster {
 
-        /** 所属文档 ID */
+        /**
+         * 所属文档 ID
+         */
         private final Long documentId;
-        /** 类簇内的所有候选切片 */
+        /**
+         * 类簇内的所有候选切片
+         */
         private final List<RetrievalCandidate> members = new ArrayList<>();
-        /** 主要候选项（评分最高的切片） */
+        /**
+         * 主要候选项（评分最高的切片）
+         */
         private RetrievalCandidate primaryCandidate;
-        /** 类簇的起始切片序号 */
+        /**
+         * 类簇的起始切片序号
+         */
         private int startChunkIndex;
-        /** 类簇的结束切片序号 */
+        /**
+         * 类簇的结束切片序号
+         */
         private int endChunkIndex;
-        /** 类簇的 RRF 融合评分（取成员最大值） */
+        /**
+         * 类簇的 RRF 融合评分（取成员最大值）
+         */
         private double rankingScore;
-        /** 类簇的向量检索评分（取成员最大值） */
+        /**
+         * 类簇的向量检索评分（取成员最大值）
+         */
         private double vectorScore;
-        /** 类簇的关键词检索评分（取成员最大值） */
+        /**
+         * 类簇的关键词检索评分（取成员最大值）
+         */
         private double keywordScore;
-        /** 类簇是否包含向量检索命中的成员 */
+        /**
+         * 类簇是否包含向量检索命中的成员
+         */
         private boolean hasVectorSource;
-        /** 类簇是否包含关键词检索命中的成员 */
+        /**
+         * 类簇是否包含关键词检索命中的成员
+         */
         private boolean hasKeywordSource;
 
         private RetrievalCluster(RetrievalCandidate seed) {
@@ -556,12 +646,16 @@ public class HybridChunkRetrievalService {
             add(seed);
         }
 
-        /** 判断候选切片是否与当前类簇连续（同文档且序号相邻） */
+        /**
+         * 判断候选切片是否与当前类簇连续（同文档且序号相邻）
+         */
         boolean isContinuousWith(RetrievalCandidate candidate) {
             return documentId.equals(candidate.documentId()) && candidate.chunkIndex() == endChunkIndex + 1;
         }
 
-        /** 添加候选切片到类簇，更新范围、评分和主要候选项 */
+        /**
+         * 添加候选切片到类簇，更新范围、评分和主要候选项
+         */
         void add(RetrievalCandidate candidate) {
             members.add(candidate);
             endChunkIndex = Math.max(endChunkIndex, candidate.chunkIndex());
@@ -576,7 +670,7 @@ public class HybridChunkRetrievalService {
             if (primaryCandidate == null
                     || candidate.rankingScore() > primaryCandidate.rankingScore()
                     || (candidate.rankingScore() == primaryCandidate.rankingScore()
-                            && candidate.chunkIndex() < primaryCandidate.chunkIndex())) {
+                    && candidate.chunkIndex() < primaryCandidate.chunkIndex())) {
                 primaryCandidate = candidate;
             }
         }
@@ -605,17 +699,23 @@ public class HybridChunkRetrievalService {
             return keywordScore;
         }
 
-        /** 获取扩展后的起始切片序号（向前扩展 neighborWindow 个切片，最小为 0） */
+        /**
+         * 获取扩展后的起始切片序号（向前扩展 neighborWindow 个切片，最小为 0）
+         */
         int expandedStartChunkIndex(int neighborWindow) {
             return Math.max(0, startChunkIndex - Math.max(0, neighborWindow));
         }
 
-        /** 获取扩展后的结束切片序号（向后扩展 neighborWindow 个切片） */
+        /**
+         * 获取扩展后的结束切片序号（向后扩展 neighborWindow 个切片）
+         */
         int expandedEndChunkIndex(int neighborWindow) {
             return endChunkIndex + Math.max(0, neighborWindow);
         }
 
-        /** 获取类簇的检索来源：BOTH（双通道）、VECTOR 或 KEYWORD */
+        /**
+         * 获取类簇的检索来源：BOTH（双通道）、VECTOR 或 KEYWORD
+         */
         String source() {
             if (hasVectorSource && hasKeywordSource) {
                 return "BOTH";

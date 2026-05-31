@@ -16,6 +16,7 @@ import com.argus.rag.document.model.vo.UploadInitResponse;
 import com.argus.rag.document.model.vo.UploadStatusResponse;
 import com.argus.rag.engine.storage.ObjectStorageService;
 import com.argus.rag.group.service.GroupMembershipService;
+import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -69,11 +70,7 @@ public class DocumentUploadService {
     /**
      * 向量导入服务
      */
-    private final com.argus.rag.ingestion.vector.VectorIngestionService vectorIngestionService;
-    /**
-     * Elasticsearch chunk 索引服务
-     */
-    private final com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService elasticsearchChunkIndexService;
+    private final VectorIngestionService vectorIngestionService;
     /**
      * Spring 事件发布器
      */
@@ -739,12 +736,6 @@ public class DocumentUploadService {
             vectorIngestionService.deleteDocumentVectors(document.getId());
         } catch (RuntimeException exception) {
             log.warn("文档失败补偿时删除向量失败: documentId={}, reason={}",
-                    document.getId(), exception.getMessage());
-        }
-        try {
-            elasticsearchChunkIndexService.deleteDocumentChunks(document.getId());
-        } catch (RuntimeException exception) {
-            log.warn("文档失败补偿时删除 ES 索引失败: documentId={}, reason={}",
                     document.getId(), exception.getMessage());
         }
     }

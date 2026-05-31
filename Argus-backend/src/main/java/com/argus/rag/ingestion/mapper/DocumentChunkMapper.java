@@ -78,4 +78,21 @@ public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
             @Param("groupId") Long groupId,
             @Param("chunkIds") List<Long> chunkIds
     );
+
+    /**
+     * 基于 pg_trgm 相似度匹配的关键词检索。
+     *
+     * <p>对 chunk_text 做 trigram 相似度计算，JOIN documents 表确保只检索
+     * 已摄入完成且未删除的文档切片。</p>
+     *
+     * @param groupId 群组 ID
+     * @param query   检索关键词
+     * @param limit   最大返回数
+     * @return 命中切片列表（含相似度分数 similarity）
+     */
+    List<Map<String, Object>> searchByKeywordSimilarity(
+            @Param("groupId") Long groupId,
+            @Param("query") String query,
+            @Param("limit") int limit
+    );
 }
