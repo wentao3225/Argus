@@ -4,7 +4,6 @@ import com.argus.rag.common.enums.DocumentStatus;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.model.entity.DocumentEntity;
-import com.argus.rag.engine.search.PgKeywordSearchService;
 import com.argus.rag.ingestion.mapper.DocumentChunkMapper;
 import com.argus.rag.ingestion.vector.VectorIngestionService;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -23,7 +22,7 @@ import java.time.LocalDateTime;
  *
  * <p>负责在文档上传完成后异步执行以下流程：
  * <ol>
- *   <li>清理上一次处理的中间产物（chunk、向量、ES 索引）</li>
+ *   <li>清理上一次处理的中间产物（chunk、向量）</li>
  *   <li>调用 {@link DocumentIngestionProcessor} 进行文档解析和分块</li>
  *   <li>将文档状态更新为 READY</li>
  * </ol>
@@ -57,11 +56,6 @@ public class DocumentIngestionAsyncService {
      * 向量导入服务
      */
     private final VectorIngestionService vectorIngestionService;
-    /**
-     * Elasticsearch chunk 索引服务
-     */
-    private final PgKeywordSearchService pgKeywordSearchService;
-
     /**
      * 异步执行文档 ETL 流程。
      *
