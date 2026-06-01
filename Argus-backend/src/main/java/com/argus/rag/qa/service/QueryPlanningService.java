@@ -28,7 +28,9 @@ public class QueryPlanningService {
 
     private static final Logger log = LoggerFactory.getLogger(QueryPlanningService.class);
 
-    /** 检索语句最大数量限制 */
+    /**
+     * 检索语句最大数量限制
+     */
     private static final int MAX_QUERY_COUNT = 3;
 
     private final ChatClient queryPlanningChatClient;
@@ -100,7 +102,9 @@ public class QueryPlanningService {
         return new QueryPlanResult(rawResult.strategy(), finalQueries);
     }
 
-    /** 构建 REWRITE 策略的检索语句：原始问题 + 重写后的语句 */
+    /**
+     * 构建 REWRITE 策略的检索语句：原始问题 + 重写后的语句
+     */
     private List<String> buildRewriteQueries(String originalQuestion, Set<String> normalizedQueries) {
         LinkedHashSet<String> rewriteQueries = new LinkedHashSet<>();
         rewriteQueries.add(originalQuestion);
@@ -108,7 +112,9 @@ public class QueryPlanningService {
         return limitQueries(rewriteQueries);
     }
 
-    /** 规范化检索语句：去除空白、去重 */
+    /**
+     * 规范化检索语句：去除空白、去重
+     */
     private Set<String> normalizeQueries(List<String> queries) {
         LinkedHashSet<String> normalizedQueries = new LinkedHashSet<>();
         if (queries == null) {
@@ -126,19 +132,25 @@ public class QueryPlanningService {
         return normalizedQueries;
     }
 
-    /** 限制检索语句数量不超过 {@link #MAX_QUERY_COUNT} */
+    /**
+     * 限制检索语句数量不超过 {@link #MAX_QUERY_COUNT}
+     */
     private List<String> limitQueries(Set<String> queries) {
         return queries.stream()
                 .limit(MAX_QUERY_COUNT)
                 .toList();
     }
 
-    /** 渲染用户提示词模板（当前未使用，保留备用） */
+    /**
+     * 渲染用户提示词模板（当前未使用，保留备用）
+     */
     private String renderUserPrompt(String question) {
         return queryPlanningUserPromptTemplate.render(Map.of("question", question));
     }
 
-    /** 校验问题非空并规范化空白字符 */
+    /**
+     * 校验问题非空并规范化空白字符
+     */
     private String requireQuestion(String question) {
         if (!StringUtils.hasText(question)) {
             throw new BusinessException("问题不能为空");

@@ -11,8 +11,8 @@ import java.util.List;
  * 包含检索到的文档列表、证据充分度等级和对应的回答指导语。
  * </p>
  *
- * @param documents       检索到的文档列表，每个文档包含证据文本和元数据
- * @param evidenceLevel   证据充分度等级，取值见 {@link EvidenceLevel}
+ * @param documents        检索到的文档列表，每个文档包含证据文本和元数据
+ * @param evidenceLevel    证据充分度等级，取值见 {@link EvidenceLevel}
  * @param evidenceGuidance 证据指导语，告知大模型当前证据状态下的回答策略
  */
 public record RetrievedEvidenceBundle(
