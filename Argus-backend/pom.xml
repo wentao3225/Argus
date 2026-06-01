@@ -145,13 +145,6 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Spring AI Alibaba — DashScope 模型接入（通义千问 Chat + Embedding） -->
-        <dependency>
-            <groupId>com.alibaba.cloud.ai</groupId>
-            <artifactId>spring-ai-alibaba-starter-dashscope</artifactId>
-            <version>${spring-ai-alibaba.version}</version>
-        </dependency>
-
         <!-- Spring AI — PGvector 向量存储 -->
         <dependency>
             <groupId>org.springframework.ai</groupId>

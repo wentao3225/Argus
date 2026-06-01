@@ -11,21 +11,21 @@ spring:
     driver-class-name: org.postgresql.Driver
 
   # ──────────────────────────────────────────────
-  # Spring AI Alibaba — DashScope 原生配置
+  # Spring AI — Chat（Kimi）+ Embedding（DashScope OpenAI 兼容）
   # ──────────────────────────────────────────────
   ai:
     model:
-      chat: dashscope
+      chat: openai
       embedding: openai
-    dashscope:
-      api-key: ${dashscope.api-key}
+    openai:
+      api-key: ${chat.api-key}
+      base-url: ${chat.base-url}
       chat:
         options:
-          model: qwen-plus
-    openai:
-      api-key: ${dashscope.api-key}
-      base-url: ${dashscope.base-url}
+          model: ${chat.model}
       embedding:
+        api-key: ${embedding.api-key}
+        base-url: ${embedding.base-url}
         options:
           # 指定维度，确保与数据库表结构一致
           dimensions: 512
