@@ -1,9 +1,12 @@
-spring:
-  profiles:
-    active: local
 server:
+  port: 8080
   servlet:
     context-path: /api
+spring:
+  profiles:
+    active: dev
+  application:
+    name: Argus-backend
 # ──────────────────────────────────────────────
 # MyBatis-Plus 配置
 # ──────────────────────────────────────────────
