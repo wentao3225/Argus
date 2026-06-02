@@ -54,6 +54,16 @@
 - Agent 框架 `spring-ai-alibaba-agent-framework` 保留不受影响（只依赖 `ChatModel` 抽象）。
 - 纯配置改造，零 Java 代码变更。
 
+### group / permission（群组与权限） ✅
+- 已过完模块文档，核心概念和代码落点清晰。
+- 权限不是独立 ACL 系统，收口在 `group_memberships.role` + `GroupMembershipService`。
+- 当前角色只有 OWNER / MEMBER 两种，没有中间层角色。
+- 两条入组路径：OWNER 邀请（邀请码）vs 用户按 groupCode 申请加入，互斥。
+- 邀请/申请均采用"只允许从 PENDING 成功转出"的条件更新防重处理。
+- `requireGroupReadable()` / `requireGroupOwner()` 是全局权限边界，document / qa / assistant 统一复用。
+- 已配合确认：`GroupMembership.java` 实体类未实际使用（Mapper XML 全用 `resultType="map"`），`group_memberships` 表本身在用。
+- 文档已同步口径：不要把当前实现讲成细粒度权限平台，本质是群组级角色控制。
+
 ## 4. ES → PG 全文检索改造（2026-05-31 完成）
 
 - 已完成 Elasticsearch → PostgreSQL `pg_trgm` 的完整替换。
@@ -69,24 +79,25 @@
 
 ## 5. 当前阶段结论
 
-- auth、upload、ingestion、qa/retrieval 阶段已收口，主讲点和能力边界清晰。
+- auth、upload、ingestion、qa/retrieval、group 五个阶段已全部收口，主讲点和能力边界清晰。
 - ingestion 主链路：上传事务 → 事件驱动异步 ETL → 状态化失败收口 → chunk 资产化 → 向量写入。关键词检索通过 PG `pg_trgm` 索引自动生效。
 - parser：简单工厂 + 策略模式；切片：结构感知分层切片。
 - retrieval 体系：查询规划 → 双通道混合检索（pgvector + pg_trgm）→ RRF 融合 → 窗口扩展 → 证据评估 → 生成回答。
 - Chat 模型：Kimi（月之暗面），Embedding：DashScope text-embedding-v3。
+- 权限模型：群组级角色控制，OWNER / MEMBER 两级，收口在 `GroupMembershipService`。
 
 ## 6. 下一步优先级
 
-- QA 模块已梳理完毕，全链路（上传→摄入→检索→问答）已闭环。
+- 六个主模块已全部过完：auth → upload → ingestion → qa/retrieval → group → （E2E 改造）。
 - 下一步建议：
-  1. 梳理 assistant（AI 助手）模块——ReactAgent、短期记忆、会话管理。
-  2. 梳理前端 assistant 页面。
-  3. 如需面试/讲解，开始整理 ingestion + retrieval 的主链路讲稿和追问口径。
+  1. 如果继续深度学习，可以梳理 assistant（AI 助手）模块——ReactAgent、短期记忆、会话管理。
+  2. 如果需要收口面试材料，可以开始整理主链路讲稿和追问口径。
 
-> 阶段性结论：主链路已全部过完（auth → upload → ingestion → qa/retrieval），下一个模块是 assistant。
+> 阶段性结论：项目主链路已全部过完，后续可选 assistant 模块或直接进入面试材料整理阶段。
 
 ## 7. 新对话接手建议
 
-- 默认从 assistant 模块继续。
-- 如果有兴趣收口面试材料，可以先从 "ingestion + retrieval 主链路" 的讲稿开始。
+- 六个主模块已全部过完，后续可选：
+  - 继续深入 assistant（ReactAgent / 记忆 / 会话管理）
+  - 进入面试材料整理阶段（讲稿 / 追问 / README 口径）
 - 优先以当前态模块文档为准；带 `V1.0`、`V2.0` 的文档默认视为历史阶段记录。
