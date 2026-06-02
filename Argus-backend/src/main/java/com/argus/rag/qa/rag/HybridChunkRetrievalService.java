@@ -122,13 +122,12 @@ public class HybridChunkRetrievalService {
         Long validGroupId = requirePositiveGroupId(groupId);
         String normalizedQuestion = requireQuestion(question);
         int validTopK = topK > 0 ? topK : 5;
-
         log.info("混合检索开始: groupId={}, topK={}, questionLength={}", validGroupId, validTopK,
                 normalizedQuestion.length());
+        // 查询规划
         QueryPlanResult queryPlan = queryPlanningService.plan(normalizedQuestion);
         log.info("查询规划完成: groupId={}, strategy={}, queries={}", validGroupId, queryPlan.strategy(),
                 queryPlan.queries());
-
         Map<Long, RetrievalCandidate> candidates = new LinkedHashMap<>();
 
         for (String plannedQuery : queryPlan.queries()) {
@@ -147,16 +146,19 @@ public class HybridChunkRetrievalService {
             return RetrievedEvidenceBundle.empty();
         }
 
+        // 排序与截断
         List<RetrievalCandidate> rankedCandidates = candidates.values().stream()
                 .sorted(Comparator
                         .comparingDouble(RetrievalCandidate::rankingScore).reversed()
                         .thenComparing(RetrievalCandidate::chunkId))
                 .limit(validTopK)
                 .toList();
+        // 聚类分组
         List<RetrievalCluster> rankedClusters = buildClusters(rankedCandidates);
         log.info("RRF融合排序完成: groupId={}, rankedCandidates={}, clusters={}",
                 validGroupId, rankedCandidates.size(), rankedClusters.size());
 
+        // 批量查询切片的完整数据库记录
         List<Long> chunkIds = rankedCandidates.stream().map(RetrievalCandidate::chunkId).toList();
         Map<Long, Map<String, Object>> rowByChunkId = indexRows(
                 documentChunkMapper.selectQaReadyChunksByIds(validGroupId, chunkIds));
@@ -180,6 +182,7 @@ public class HybridChunkRetrievalService {
             log.info("混合检索证据组装为空: groupId={}, elapsedMs={}", validGroupId, elapsedMs);
             return RetrievedEvidenceBundle.empty();
         }
+        // 证据充分度评估
         EvidenceLevel evidenceLevel = evaluateEvidenceLevel(documents);
         long elapsedMs = (System.nanoTime() - startNano) / 1_000_000;
         log.info("混合检索完成: groupId={}, evidenceCount={}, evidenceLevel={}, elapsedMs={}",
@@ -194,6 +197,7 @@ public class HybridChunkRetrievalService {
             Map<Long, RetrievalCandidate> candidates,
             Long groupId,
             String query) {
+        // 执行向量检索
         List<PgVectorRetrievalAdapter.VectorHit> vectorHits = vectorRetrievalAdapter.search(groupId, query,
                 CHANNEL_TOP_K);
         for (int index = 0; index < vectorHits.size(); index++) {
@@ -212,6 +216,7 @@ public class HybridChunkRetrievalService {
             Map<Long, RetrievalCandidate> candidates,
             Long groupId,
             String query) {
+        // 执行关键词检索
         List<PgKeywordSearchService.KeywordHit> keywordHits = pgKeywordSearchService.search(groupId,
                 query, CHANNEL_TOP_K);
         for (int index = 0; index < keywordHits.size(); index++) {

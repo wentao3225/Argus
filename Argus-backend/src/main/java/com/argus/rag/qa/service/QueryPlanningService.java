@@ -2,8 +2,7 @@ package com.argus.rag.qa.service;
 
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.qa.model.QueryPlanResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -23,10 +22,9 @@ import java.util.Set;
  * 并生成对应的检索语句列表。规划失败时自动回退为 DIRECT 策略。
  * </p>
  */
+@Slf4j
 @Service
 public class QueryPlanningService {
-
-    private static final Logger log = LoggerFactory.getLogger(QueryPlanningService.class);
 
     /**
      * 检索语句最大数量限制
@@ -63,11 +61,8 @@ public class QueryPlanningService {
     public QueryPlanResult plan(String question) {
         String normalizedQuestion = requireQuestion(question);
         try {
-
             Prompt planPrompt = queryPlanningUserPromptTemplate.create(Map.of("question", normalizedQuestion));
-
             QueryPlanResult rawResult = queryPlanningChatClient.prompt(planPrompt)
-//                    .user(user -> user.text(renderUserPrompt(normalizedQuestion)))
                     .call()
                     .entity(QueryPlanResult.class);
             QueryPlanResult validatedPlan = validatePlan(rawResult, normalizedQuestion);
@@ -85,10 +80,12 @@ public class QueryPlanningService {
      */
     private QueryPlanResult validatePlan(QueryPlanResult rawResult, String originalQuestion) {
         if (rawResult == null || rawResult.strategy() == null) {
+            log.warn("由于：rawResult == null || rawResult.strategy() == null。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         Set<String> normalizedQueries = normalizeQueries(rawResult.queries());
         if (normalizedQueries.isEmpty()) {
+            log.warn("由于：normalizedQueries.isEmpty()。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         List<String> finalQueries = switch (rawResult.strategy()) {
@@ -97,6 +94,7 @@ public class QueryPlanningService {
             case DECOMPOSE -> limitQueries(normalizedQueries);
         };
         if (finalQueries.isEmpty()) {
+            log.warn("由于：finalQueries.isEmpty()。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         return new QueryPlanResult(rawResult.strategy(), finalQueries);
