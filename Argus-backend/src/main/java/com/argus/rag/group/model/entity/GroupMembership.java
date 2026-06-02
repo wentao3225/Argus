@@ -15,19 +15,29 @@ import java.time.LocalDateTime;
 @Data
 public class GroupMembership {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 群组 ID */
+    /**
+     * 群组 ID
+     */
     private Long groupId;
 
-    /** 用户 ID */
+    /**
+     * 用户 ID
+     */
     private Long userId;
 
-    /** 群组角色 */
+    /**
+     * 群组角色
+     */
     private GroupRole role;
 
-    /** 加入时间 */
+    /**
+     * 加入时间
+     */
     private LocalDateTime createdAt;
 }

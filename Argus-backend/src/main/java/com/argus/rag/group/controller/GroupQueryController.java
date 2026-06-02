@@ -21,7 +21,9 @@ public class GroupQueryController {
         this.groupMembershipService = groupMembershipService;
     }
 
-    /** 获取当前用户可见的群组列表（拥有的、加入的、待处理邀请） */
+    /**
+     * 获取当前用户可见的群组列表（拥有的、加入的、待处理邀请）
+     */
     @GetMapping("/my")
     public ApiResponse<GroupMembershipService.GroupQueryResult> listVisibleGroups() {
         return ApiResponse.success(groupMembershipService.listVisibleGroups());

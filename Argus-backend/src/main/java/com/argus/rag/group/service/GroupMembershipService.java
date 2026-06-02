@@ -12,17 +12,14 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Map;
 
+import static com.argus.rag.group.constant.GroupConstant.*;
+
 /**
  * 群组成员关系服务，提供群组可见性查询、权限校验等功能。
  */
 @Slf4j
 @Service
 public class GroupMembershipService {
-
-    private static final String NON_MEMBER_MESSAGE = "当前用户不是目标群组成员";
-    private static final String NON_OWNER_MESSAGE = "当前用户不是目标群组 OWNER";
-    private static final String EXISTING_MEMBER_MESSAGE = "被邀请人已是群组成员";
-    private static final String EXISTING_PENDING_INVITATION_MESSAGE = "已存在待处理邀请";
     private final GroupMembershipMapper groupMembershipMapper;
     private final CurrentUserService currentUserService;
 
