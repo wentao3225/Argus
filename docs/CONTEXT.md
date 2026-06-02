@@ -34,6 +34,26 @@
 - `ingestion_jobs` 相关代码已彻底移除。
 - 七步主链路：查找文档 → 读取（MinIO） → 解析（ParserFactory） → 清洗（TextCleanup） → 预览落库 → 切片（StructureAware） → 向量写入。
 
+### qa / retrieval（问答与检索） ✅
+- 全链路已系统梳理，主流程和关键类定位清晰。
+- 查询规划：DIRECT / REWRITE / DECOMPOSE 三种策略，失败回退到 DIRECT。
+- 双通道：pgvector 向量检索 + pg_trgm 关键词检索，CHANNEL_TOP_K = 50，关键词路故障时降级为空结果。
+- RRF 融合：`RRF_K = 0`，按排名倒数累加排序。
+- 窗口扩展：邻居窗口大小 1，补充命中 chunk 前后的上下文。
+- 证据评估：NONE / WEAK / PARTIAL / SUFFICIENT 四级，NONE 触发硬编码拒答，其余通过 Prompt 约束。
+- 预检索机制：先调 `retrieveEvidence()`，通过 `PREFETCHED_DOCUMENTS_CONTEXT_KEY` 传给 Advisor 避免重复查库。
+- 引用：当前按文件级去重（`fileName`），`snippet` 固定留空。
+- 同步 / 流式 Prompt 不一致：同步用 `system.st` 要求 JSON 输出，流式在代码里硬编码为纯文本。
+- 做过一轮去重重构：抽取 `callLlm()` 公共方法，消除 `getStructuredAnswer` 和 `parseFallbackAnswer` 的重复代码。
+- 发现 `QaAnswerParser.parse()` 实际和 `objectMapper.readValue()` 等效，兜底效果有限（已识别，未修复）。
+
+### Chat 模型切换（2026-06-01 完成）
+- 从 DashScope（通义千问 qwen-plus）切换到 Kimi（月之暗面 moonshot-v1 / kimi-k2.6）。
+- 移除 `spring-ai-alibaba-starter-dashscope` 依赖，Chat 改用 `spring-ai-starter-model-openai` 指向 Kimi 的 `https://api.moonshot.cn/v1`。
+- Embedding 保留 DashScope `text-embedding-v3`（通过 OpenAI 兼容接口）。
+- Agent 框架 `spring-ai-alibaba-agent-framework` 保留不受影响（只依赖 `ChatModel` 抽象）。
+- 纯配置改造，零 Java 代码变更。
+
 ## 4. ES → PG 全文检索改造（2026-05-31 完成）
 
 - 已完成 Elasticsearch → PostgreSQL `pg_trgm` 的完整替换。
@@ -49,26 +69,24 @@
 
 ## 5. 当前阶段结论
 
-- auth、upload、ingestion 阶段已收口，主讲点和能力边界清晰。
+- auth、upload、ingestion、qa/retrieval 阶段已收口，主讲点和能力边界清晰。
 - ingestion 主链路：上传事务 → 事件驱动异步 ETL → 状态化失败收口 → chunk 资产化 → 向量写入。关键词检索通过 PG `pg_trgm` 索引自动生效。
 - parser：简单工厂 + 策略模式；切片：结构感知分层切片。
-- retrieval 体系：双通道混合检索（pgvector 向量 + pg_trgm 关键词）→ RRF 融合。
+- retrieval 体系：查询规划 → 双通道混合检索（pgvector + pg_trgm）→ RRF 融合 → 窗口扩展 → 证据评估 → 生成回答。
+- Chat 模型：Kimi（月之暗面），Embedding：DashScope text-embedding-v3。
 
 ## 6. 下一步优先级
 
-- ES→PG 改造已完成，retrieval 体系已稳定为最终态。
+- QA 模块已梳理完毕，全链路（上传→摄入→检索→问答）已闭环。
 - 下一步建议：
-  1. 继续梳理 retrieval（检索/召回）主链路——基于最终态代码理解 `HybridChunkRetrievalService` + `PgKeywordSearchService`。
-  2. 阅读 `docs/qa/问答模块整体流程与代码定位.md`，串联"上传→摄入→检索→问答"全链路。
-  3. 梳理前端问答主链路（`QaView.vue` + SSE 流式输出）。
-  4. 如需面试/讲解，优先准备 ingestion + retrieval 的主链路讲稿和追问口径。
+  1. 梳理 assistant（AI 助手）模块——ReactAgent、短期记忆、会话管理。
+  2. 梳理前端 assistant 页面。
+  3. 如需面试/讲解，开始整理 ingestion + retrieval 的主链路讲稿和追问口径。
 
-> 阶段性结论：ingestion 端已收口，检索体系已稳定，retrieval 是下一个主线。
+> 阶段性结论：主链路已全部过完（auth → upload → ingestion → qa/retrieval），下一个模块是 assistant。
 
 ## 7. 新对话接手建议
 
-- 默认从 QA/retrieval 相关代码继续，不必回到 auth/upload/ingestion 细节。
+- 默认从 assistant 模块继续。
+- 如果有兴趣收口面试材料，可以先从 "ingestion + retrieval 主链路" 的讲稿开始。
 - 优先以当前态模块文档为准；带 `V1.0`、`V2.0` 的文档默认视为历史阶段记录。
-- retrieval 表达以"双通道混合检索（pgvector + pg_trgm）、RRF 融合、查询规划、证据评估"为主。
-- 参考 `docs/qa/问答模块整体流程与代码定位.md` 作为 QA 模块入口。
-- 参考 `docs/改造方案-ES替换为PG全文检索.md` 理解检索体系变更。
