@@ -51,7 +51,6 @@
 - 从 DashScope（通义千问 qwen-plus）切换到 Kimi（月之暗面 moonshot-v1 / kimi-k2.6）。
 - 移除 `spring-ai-alibaba-starter-dashscope` 依赖，Chat 改用 `spring-ai-starter-model-openai` 指向 Kimi 的 `https://api.moonshot.cn/v1`。
 - Embedding 保留 DashScope `text-embedding-v3`（通过 OpenAI 兼容接口）。
-- Agent 框架 `spring-ai-alibaba-agent-framework` 保留不受影响（只依赖 `ChatModel` 抽象）。
 - 纯配置改造，零 Java 代码变更。
 
 ### group / permission（群组与权限） ✅
@@ -60,7 +59,7 @@
 - 当前角色只有 OWNER / MEMBER 两种，没有中间层角色。
 - 两条入组路径：OWNER 邀请（邀请码）vs 用户按 groupCode 申请加入，互斥。
 - 邀请/申请均采用"只允许从 PENDING 成功转出"的条件更新防重处理。
-- `requireGroupReadable()` / `requireGroupOwner()` 是全局权限边界，document / qa / assistant 统一复用。
+- `requireGroupReadable()` / `requireGroupOwner()` 是全局权限边界，document / qa 统一复用。
 - 已配合确认：`GroupMembership.java` 实体类未实际使用（Mapper XML 全用 `resultType="map"`），`group_memberships` 表本身在用。
 - 文档已同步口径：不要把当前实现讲成细粒度权限平台，本质是群组级角色控制。
 
@@ -88,16 +87,14 @@
 
 ## 6. 下一步优先级
 
-- 六个主模块已全部过完：auth → upload → ingestion → qa/retrieval → group → （E2E 改造）。
+- 五个主模块已全部过完：auth → upload → ingestion → qa/retrieval → group。
+- assistant 模块已移除（不深入学，不留负担）。
 - 下一步建议：
-  1. 如果继续深度学习，可以梳理 assistant（AI 助手）模块——ReactAgent、短期记忆、会话管理。
-  2. 如果需要收口面试材料，可以开始整理主链路讲稿和追问口径。
+  - 开始整理面试材料：主链路讲稿、高频追问与回答、README 口径、简历项目描述。
 
-> 阶段性结论：项目主链路已全部过完，后续可选 assistant 模块或直接进入面试材料整理阶段。
+> 阶段性结论：项目主链路已全部过完，进入面试材料整理阶段。
 
 ## 7. 新对话接手建议
 
-- 六个主模块已全部过完，后续可选：
-  - 继续深入 assistant（ReactAgent / 记忆 / 会话管理）
-  - 进入面试材料整理阶段（讲稿 / 追问 / README 口径）
+- 五个主模块已全部过完，进入面试材料整理阶段（讲稿 / 追问 / README 口径）。
 - 优先以当前态模块文档为准；带 `V1.0`、`V2.0` 的文档默认视为历史阶段记录。
