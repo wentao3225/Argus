@@ -15,7 +15,7 @@ const ADMIN_HOME_PATH = '/app/admin/users'
 const USER_HOME_PATH = '/app/groups'
 const ACCOUNT_SECURITY_PATH = '/app/settings'
 const LOGIN_PATH = '/login'
-const BUSINESS_PATH_PREFIXES = ['/app/groups', '/app/documents', '/app/qa', '/app/assistant']
+const BUSINESS_PATH_PREFIXES = ['/app/groups', '/app/documents', '/app/qa']
 
 interface AuthState {
   accessToken: string | null

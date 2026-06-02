@@ -37,18 +37,6 @@ const router = createRouter({
           meta: { title: '知识库问答' },
         },
         {
-          path: 'assistant',
-          name: 'assistant',
-          component: () => import('../views/assistant/AssistantView.vue'),
-          meta: { title: 'AI 助手' },
-        },
-        {
-          path: 'assistant/:sessionId',
-          name: 'assistant-chat',
-          component: () => import('../views/assistant/AssistantView.vue'),
-          meta: { title: 'AI 助手' },
-        },
-        {
           path: 'groups',
           name: 'groups',
           component: () => import('../views/groups/GroupsPage.vue'),
