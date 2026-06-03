@@ -2,7 +2,6 @@ package com.argus.rag.engine.storage;
 
 import com.argus.rag.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -34,12 +33,16 @@ import java.util.List;
 public class MissingObjectStorageService implements ObjectStorageService {
 
 
-    /** 统一的「对象存储未配置」错误提示，所有方法共享 */
+    /**
+     * 统一的「对象存储未配置」错误提示，所有方法共享
+     */
     private static final String NOT_CONFIGURED_MESSAGE =
             "对象存储未配置，请在 application.yml 或环境变量中设置 "
                     + "storage.minio.endpoint、storage.minio.access-key 和 storage.minio.secret-key";
 
-    /** 默认存储桶名称，从配置中读取，未配置时默认为 {@code argus-rag-documents} */
+    /**
+     * 默认存储桶名称，从配置中读取，未配置时默认为 {@code argus-rag-documents}
+     */
     private final String bucket;
 
     /**
