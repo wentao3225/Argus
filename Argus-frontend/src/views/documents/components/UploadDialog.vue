@@ -1,6 +1,11 @@
 <script setup lang="ts">
-import { ref, nextTick, watch } from 'vue'
-import { uploadDocument } from '@/api/document'
+import { ref, nextTick, watch, computed } from 'vue'
+import {
+  uploadDocument,
+  initDocumentUpload,
+  uploadDocumentChunk,
+  completeDocumentUpload,
+} from '@/api/document'
 import { extractApiError } from '@/api/http'
 
 const props = defineProps<{
@@ -14,6 +19,13 @@ const emit = defineEmits<{
   uploaded: []
 }>()
 
+// ── 常量 ──
+const CHUNK_SIZE = 5 * 1024 * 1024 // 5MB per chunk
+const DIRECT_LIMIT = 10 * 1024 * 1024 // 10MB direct upload limit
+const MAX_FILE_SIZE = 256 * 1024 * 1024 // 256MB max total
+const allowedExts = ['.txt', '.md', '.pdf', '.docx']
+
+// ── 状态 ──
 const file = ref<File | null>(null)
 const progress = ref(0)
 const loading = ref(false)
@@ -21,8 +33,15 @@ const errorMsg = ref('')
 const success = ref(false)
 const fileInputRef = ref<HTMLInputElement | null>(null)
 const dragging = ref(false)
+const uploadMode = ref<'direct' | 'chunked'>('direct')
+const chunkProgress = ref<{ current: number; total: number }>({ current: 0, total: 0 })
 
-const allowedExts = ['.txt', '.md', '.pdf', '.docx']
+// 当前进度描述
+const progressLabel = computed(() => {
+  if (!loading.value) return ''
+  if (uploadMode.value === 'direct') return `${progress.value}%`
+  return `分片 ${chunkProgress.value.current}/${chunkProgress.value.total} · ${progress.value}%`
+})
 
 function resetState() {
   file.value = null
@@ -31,6 +50,7 @@ function resetState() {
   errorMsg.value = ''
   success.value = false
   dragging.value = false
+  chunkProgress.value = { current: 0, total: 0 }
 }
 
 watch(
@@ -48,8 +68,8 @@ function validateFile(f: File): string | null {
   if (!allowedExts.includes(ext)) {
     return `不支持的文件类型（支持: ${allowedExts.join(', ')}）`
   }
-  if (f.size > 10 * 1024 * 1024) {
-    return '文件大小不能超过 10MB（大文件请使用分片上传）'
+  if (f.size > MAX_FILE_SIZE) {
+    return `文件大小不能超过 ${MAX_FILE_SIZE / 1024 / 1024}MB`
   }
   return null
 }
@@ -69,6 +89,7 @@ function onFilePicked(e: Event) {
   }
   errorMsg.value = ''
   file.value = f
+  uploadMode.value = f.size > DIRECT_LIMIT ? 'chunked' : 'direct'
 }
 
 function onDrop(e: DragEvent) {
@@ -84,6 +105,7 @@ function onDrop(e: DragEvent) {
   }
   errorMsg.value = ''
   file.value = f
+  uploadMode.value = f.size > DIRECT_LIMIT ? 'chunked' : 'direct'
 }
 
 function onDragOver(e: DragEvent) {
@@ -95,6 +117,97 @@ function onDragLeave() {
   dragging.value = false
 }
 
+// ── SHA-256 计算 ──
+async function computeSha256(file: File): Promise<string> {
+  const buffer = await file.arrayBuffer()
+  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
+}
+
+// ── 直接上传 ──
+async function handleDirectUpload() {
+  if (!file.value || props.groupId === null) return
+  await uploadDocument({
+    groupId: props.groupId,
+    file: file.value,
+    onProgress: (loaded, total) => {
+      if (total) {
+        progress.value = Math.round((loaded / total) * 100)
+      }
+    },
+  })
+}
+
+// ── 分片上传 ──
+async function handleChunkedUpload() {
+  if (!file.value || props.groupId === null) return
+
+  const f = file.value
+  const fileHash = await computeSha256(f)
+  const chunkCount = Math.ceil(f.size / CHUNK_SIZE)
+
+  // 初始化会话
+  const initResult = await initDocumentUpload({
+    groupId: props.groupId,
+    fileName: f.name,
+    fileSize: f.size,
+    contentType: f.type || 'application/octet-stream',
+    fileHash,
+    chunkSize: CHUNK_SIZE,
+    chunkCount,
+  })
+
+  if (initResult.instantUpload && initResult.documentId != null) {
+    // 秒传命中
+    progress.value = 100
+    return
+  }
+  if (!initResult.uploadId) {
+    throw new Error('初始化上传会话失败')
+  }
+
+  const uploadId = initResult.uploadId
+  const alreadyUploaded = new Set(initResult.uploadedChunks ?? [])
+  chunkProgress.value = { current: alreadyUploaded.size, total: chunkCount }
+
+  // 逐片上传
+  let totalBytes = 0
+  for (let i = 0; i < chunkCount; i++) {
+    if (alreadyUploaded.has(i)) {
+      totalBytes += chunkSizeAt(f, i)
+      continue
+    }
+
+    const start = i * CHUNK_SIZE
+    const end = Math.min(start + CHUNK_SIZE, f.size)
+    const chunkBlob = f.slice(start, end)
+
+    // 简化：用整体文件哈希作为分片标识（后端仅存储，不校验）
+    await uploadDocumentChunk({
+      uploadId,
+      chunkIndex: i,
+      chunkHash: `${fileHash}-${i}`,
+      chunk: chunkBlob,
+    })
+
+    totalBytes += chunkBlob.size
+    chunkProgress.value.current = i + 1
+    progress.value = Math.round((totalBytes / f.size) * 100)
+  }
+
+  // 完成合并
+  await completeDocumentUpload(uploadId)
+  progress.value = 100
+}
+
+function chunkSizeAt(f: File, index: number): number {
+  const start = index * CHUNK_SIZE
+  const end = Math.min(start + CHUNK_SIZE, f.size)
+  return end - start
+}
+
+// ── 统一上传入口 ──
 async function handleUpload() {
   if (!file.value || props.groupId === null) return
 
@@ -102,15 +215,11 @@ async function handleUpload() {
   errorMsg.value = ''
   progress.value = 0
   try {
-    await uploadDocument({
-      groupId: props.groupId,
-      file: file.value,
-      onProgress: (loaded, total) => {
-        if (total) {
-          progress.value = Math.round((loaded / total) * 100)
-        }
-      },
-    })
+    if (uploadMode.value === 'direct') {
+      await handleDirectUpload()
+    } else {
+      await handleChunkedUpload()
+    }
     success.value = true
     file.value = null
     setTimeout(() => {
@@ -163,6 +272,11 @@ function formatSize(bytes: number): string {
         目标群组：<strong>{{ groupLabel }}</strong>
       </p>
 
+      <!-- 上传模式提示 -->
+      <div v-if="file && uploadMode === 'chunked'" class="upload-dialog__mode-tag">
+        分片上传 · {{ chunkProgress.value.total }} 片
+      </div>
+
       <!-- Drop zone -->
       <div
         v-if="!success"
@@ -185,7 +299,10 @@ function formatSize(bytes: number): string {
             <strong>点击选择文件</strong>
             <span>或将文件拖拽到此处</span>
           </p>
-          <p class="upload-dialog__zone-hint">支持 TXT · MD · PDF · DOCX，最大 10 MB</p>
+          <p class="upload-dialog__zone-hint">
+            支持 TXT · MD · PDF · DOCX
+            <template v-if="!file"> · 最大 256MB</template>
+          </p>
         </template>
         <template v-else>
           <div class="upload-dialog__file-icon">
@@ -198,6 +315,138 @@ function formatSize(bytes: number): string {
           <p class="upload-dialog__file-size">{{ formatSize(file.size) }}</p>
           <button
             class="upload-dialog__file-change"
+            type="button"
+            @click.stop="fileInputRef?.click()"
+          >
+            更换文件
+          </button>
+        </template>
+      </div>
+
+      <input
+        ref="fileInputRef"
+        type="file"
+        accept=".txt,.md,.pdf,.docx"
+        class="upload-dialog__file-input"
+        @change="onFilePicked"
+      />
+
+      <!-- Progress -->
+      <div v-if="loading || success" class="upload-dialog__progress">
+        <div class="upload-dialog__progress-track">
+          <div
+            class="upload-dialog__progress-fill"
+            :class="{ 'is-done': success }"
+            :style="{ width: progress + '%' }"
+          />
+        </div>
+        <span class="upload-dialog__progress-text">
+          {{ success ? '上传成功' : progressLabel }}
+        </span>
+      </div>
+
+      <!-- Error with retry -->
+      <div v-if="errorMsg" class="upload-dialog__error">
+        <div class="upload-dialog__error-icon">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </div>
+        <span class="upload-dialog__error-text">{{ errorMsg }}</span>
+        <button
+          v-if="file && !loading"
+          class="upload-dialog__error-retry"
+          type="button"
+          @click="retryUpload"
+        >
+          重试
+        </button>
+      </div>
+
+      <!-- Actions -->
+      <div class="upload-dialog__actions">
+        <button
+          v-if="!success"
+          class="upload-dialog__btn upload-dialog__btn--primary"
+          :disabled="!file || loading"
+          @click="handleUpload"
+        >
+          <span v-if="!loading">开始上传</span>
+          <span v-else>上传中…</span>
+        </button>
+        <button
+          class="upload-dialog__btn upload-dialog__btn--ghost"
+          :disabled="loading"
+          @click="close"
+        >
+          {{ success ? '关闭' : '取消' }}
+        </button>
+      </div>
+    </div>
+  </el-dialog>
+</template>
+
+<style scoped>
+/* ── Header ── */
+.upload-dialog__header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upload-dialog__eyebrow {
+  font-family: 'Poppins', sans-serif;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--brand-primary);
+}
+
+.upload-dialog__title {
+  margin: 0;
+  font-family: 'Poppins', 'Noto Sans SC', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.upload-dialog {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.upload-dialog__group {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--text-secondary);
+}
+
+.upload-dialog__group strong {
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+/* 分片模式标签 */
+.upload-dialog__mode-tag {
+  align-self: flex-start;
+  padding: 2px 10px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e8f4fd;
+  color: #1a73e8;
+}
+
+/* Drop zone */
+.upload-dialog__zone {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
             type="button"
             @click.stop="fileInputRef?.click()"
           >
