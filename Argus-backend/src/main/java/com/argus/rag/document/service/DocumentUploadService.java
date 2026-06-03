@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -613,13 +614,14 @@ public class DocumentUploadService {
         DocumentEntity document = null;
         log.info("开始上传文档: groupId={}, userId={}, fileName={}, size={}, objectKey={}",
                 groupId, userId, fileName, file.getSize(), objectKey);
+        String fileHash = computeSha256(file);
         uploadDirectFile(bucket, objectKey, file);
         log.info("对象存储上传完成: groupId={}, objectKey={}", groupId, objectKey);
         try {
             document = persistAndFinalizeUploadedDocument(new FinalizedUploadCommand(
                     groupId, userId, fileName, fileExt,
                     normalizeContentType(file.getContentType()), file.getSize(),
-                    null, bucket, objectKey));
+                    fileHash, bucket, objectKey));
             return document.getId();
         } catch (RuntimeException exception) {
             log.error("文档上传链路失败: groupId={}, objectKey={}, reason={}",
@@ -716,6 +718,28 @@ public class DocumentUploadService {
             throw exception;
         } catch (RuntimeException exception) {
             throw new BusinessException("文档上传失败");
+        }
+    }
+
+    /**
+     * 计算文件的 SHA-256 哈希值，用于秒传检测。
+     */
+    private String computeSha256(MultipartFile file) {
+        try (java.io.InputStream inputStream = file.getInputStream()) {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = inputStream.read(buffer)) != -1) {
+                digest.update(buffer, 0, bytesRead);
+            }
+            byte[] hashBytes = digest.digest();
+            StringBuilder hexString = new StringBuilder();
+            for (byte b : hashBytes) {
+                hexString.append(String.format("%02x", b));
+            }
+            return hexString.toString();
+        } catch (Exception exception) {
+            throw new BusinessException("计算文件哈希失败");
         }
     }
 

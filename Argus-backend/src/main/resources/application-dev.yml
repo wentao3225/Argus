@@ -1,9 +1,9 @@
-project:
-  name: Argus-backend
-  version: 1.0.0
 spring:
   application:
     name: argus-service
+  config:
+    import:
+    - classpath:application-local.yml
   datasource:
     url: ${datasource.url}
     username: ${datasource.username}
@@ -23,6 +23,7 @@ spring:
       chat:
         options:
           model: ${chat.model}
+          temperature: 0.6
       embedding:
         api-key: ${embedding.api-key}
         base-url: ${embedding.base-url}
@@ -53,6 +54,9 @@ rag:
     refresh-token-expire-days: 14
     refresh-cookie-name: ARGUS_DD_RAG_REFRESH_TOKEN
     refresh-cookie-secure: false
+  qa:
+    # 查询规划开关：true=LLM分析问题并改写/拆分，false=直接使用原问题检索
+    query-planning-enabled: true
 
 ingestion:
   chunking:

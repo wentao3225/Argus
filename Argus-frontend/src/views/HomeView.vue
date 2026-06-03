@@ -17,6 +17,13 @@ function navigateToApp() {
   }
 }
 
+function scrollTo(id: string) {
+  const el = document.getElementById(id)
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth' })
+  }
+}
+
 // scroll reveal
 onMounted(() => {
   nextTick(() => {
@@ -48,11 +55,7 @@ const features = [
     desc: '群组内提问，混合检索（关键词 + 语义向量）驱动 LLM 生成可溯源回答。',
   },
   {
-    icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 12C8.5 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12C15.5 13.933 13.933 15.5 12 15.5C10.067 15.5 8.5 13.933 8.5 12Z" stroke="currentColor" stroke-width="1.5"/></svg>`,
-    title: 'AI 智能助手',
-    desc: '多轮对话 Agent，支持 SSE 流式输出、工具编排与短期记忆管理。',
-  },
-  {
+
     icon: `<svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="9" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="15" cy="6" r="3" stroke="currentColor" stroke-width="1.5"/><path d="M3 18V17C3 14.7909 4.79086 13 7 13H11C13.2091 13 15 14.7909 15 17V18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><path d="M15 13H17C19.2091 13 21 14.7909 21 17V18" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
     title: '团队协作',
     desc: '创建知识库群组，邀请成员，审批申请，群组间数据隔离。',
@@ -73,7 +76,6 @@ const steps = [
   { num: '01', title: '创建群组，组建团队', desc: '创建知识库群组，通过邀请码或审批机制邀请成员加入协作。' },
   { num: '02', title: '上传文档，自动入库', desc: '上传文档至群组知识库，系统自动完成切片、向量化与索引。' },
   { num: '03', title: '提问检索，获取答案', desc: '在知识库内提问，混合检索驱动 LLM 生成带引用的可信回答。' },
-  { num: '04', title: 'AI 助手，持续对话', desc: 'Agent 自主编排工具调用，流式输出，短期记忆管理。' },
 ]
 
 const cases = [
@@ -107,9 +109,9 @@ const cases = [
           <span>数据洞察中心</span>
         </a>
         <nav class="nav-links">
-          <a href="#features">核心功能</a>
-          <a href="#workflow">工作流程</a>
-          <a href="#cases">应用场景</a>
+          <a href="javascript:;" @click="scrollTo('features')">核心功能</a>
+          <a href="javascript:;" @click="scrollTo('workflow')">工作流程</a>
+          <a href="javascript:;" @click="scrollTo('cases')">应用场景</a>
         </nav>
         <div class="nav-actions">
           <button class="btn-ghost" @click="showLoginModal = true">登录</button>
@@ -128,14 +130,14 @@ const cases = [
       <div class="hero-content container">
         <div class="hero-badge">
           <span class="badge-pulse"></span>
-          RAG + Agent · 企业级智能知识平台
+          RAG · 企业级智能知识平台
         </div>
         <h1 class="hero-title">
           让每一次提问<br>
           <span class="text-gradient">都有据可查</span>
         </h1>
         <p class="hero-desc">
-          基于检索增强生成与 AI Agent 技术，将企业私有知识库与大语言模型深度融合，
+          基于检索增强生成技术，将企业私有知识库与大语言模型深度融合，
           实现精准溯源、自主编排的可信智能知识服务。
         </p>
         <div class="hero-actions">
@@ -175,7 +177,7 @@ const cases = [
         <div class="section-header scroll-reveal">
           <span class="section-tag">核心功能</span>
           <h2 class="section-title">覆盖知识管理全链路</h2>
-          <p class="section-desc">从文档入库到 AI 对话，一站式构建企业智能知识服务体系</p>
+          <p class="section-desc">从文档入库到知识问答，一站式构建企业智能知识服务体系</p>
         </div>
 
         <div class="features-grid">
@@ -193,7 +195,7 @@ const cases = [
       <div class="container container-narrow">
         <div class="section-header scroll-reveal">
           <span class="section-tag">工作流程</span>
-          <h2 class="section-title">四步开启智能知识服务</h2>
+          <h2 class="section-title">三步开启智能知识服务</h2>
           <p class="section-desc">从零到一，快速构建企业级 RAG 应用</p>
         </div>
 
@@ -236,7 +238,7 @@ const cases = [
           <div class="cta-bg-orb cta-orb-1"></div>
           <div class="cta-bg-orb cta-orb-2"></div>
           <h2>准备好构建您的<br>智能知识平台了吗？</h2>
-          <p>立即体验企业级 RAG + Agent 解决方案，让每一次提问都有据可查。</p>
+          <p>立即体验企业级 RAG 知识库解决方案，让每一次提问都有据可查。</p>
           <div class="cta-buttons">
             <button class="btn-cta-primary" @click="showLoginModal = true">免费试用</button>
             <button class="btn-cta-outline" @click="navigateToApp()">查看演示</button>
@@ -264,13 +266,13 @@ const cases = [
               </svg>
               <span>数据洞察中心</span>
             </div>
-            <p>融合 RAG 与 AI Agent 技术的企业级智能知识平台</p>
+            <p>基于检索增强生成技术的企业级智能知识平台</p>
           </div>
           <div class="footer-col">
             <h4>产品</h4>
-            <a href="#features">核心功能</a>
-            <a href="#workflow">工作流程</a>
-            <a href="#cases">应用场景</a>
+            <a href="javascript:;" @click="scrollTo('features')">核心功能</a>
+            <a href="javascript:;" @click="scrollTo('workflow')">工作流程</a>
+            <a href="javascript:;" @click="scrollTo('cases')">应用场景</a>
           </div>
           <div class="footer-col">
             <h4>接口</h4>
@@ -614,6 +616,7 @@ const caseIcons: Record<string, string> = {
 .features {
   padding: 120px 0;
   background: var(--surface-white);
+  scroll-margin-top: 76px;
 }
 
 .features-grid {
@@ -673,6 +676,7 @@ const caseIcons: Record<string, string> = {
 .workflow {
   padding: 120px 0;
   background: var(--surface-subtle);
+  scroll-margin-top: 76px;
 }
 
 .steps-list {
@@ -738,6 +742,7 @@ const caseIcons: Record<string, string> = {
 .cases {
   padding: 120px 0;
   background: var(--surface-white);
+  scroll-margin-top: 76px;
 }
 
 .cases-grid {

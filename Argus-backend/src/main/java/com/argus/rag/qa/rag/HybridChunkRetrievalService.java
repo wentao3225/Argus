@@ -254,12 +254,14 @@ public class HybridChunkRetrievalService {
         }
         Long chunkId = requireLong(getValue(row, "chunkId"), "chunkId");
         String fileName = requireText(getValue(row, "fileName"), "fileName");
+        String chunkText = requireText(getValue(row, "chunkText"), "chunkText");
         Map<String, Object> metadata = new LinkedHashMap<>();
         metadata.put("evidenceId", evidenceId);
         metadata.put("groupId", requireLong(getValue(row, "groupId"), "groupId"));
         metadata.put("documentId", documentId);
         metadata.put("chunkId", chunkId);
         metadata.put("chunkIndex", chunkIndex);
+        metadata.put("chunkText", chunkText);
         metadata.put("primaryChunkId", cluster.primaryChunkId());
         metadata.put("primaryChunkIndex", cluster.primaryChunkIndex());
         metadata.put("startChunkIndex", cluster.expandedStartChunkIndex(neighborWindow));

@@ -285,7 +285,7 @@ public class QaChatService {
                                 evidenceBundle.documents()))
                 .stream()
                 .chatResponse()
-                .map(response -> {
+                .<String>handle((response, sink) -> {
                     Usage usage = response.getMetadata().getUsage();
                     if (usage != null && usage.getTotalTokens() != null
                             && usage.getTotalTokens() > 0) {
@@ -294,10 +294,9 @@ public class QaChatService {
                     String text = response.getResult().getOutput().getText();
                     if (text != null) {
                         charCount.addAndGet(text.length());
+                        sink.next(text);
                     }
-                    return text;
                 })
-                .filter(StringUtils::hasText)
                 .doOnComplete(() -> {
                     long elapsedMs = (System.nanoTime() - startNano) / 1_000_000;
                     long latencyMs = System.currentTimeMillis() - startMs;

@@ -1,6 +1,7 @@
 package com.argus.rag.metrics.model.vo;
 
 import lombok.Data;
+
 import java.math.BigDecimal;
 
 /**
@@ -10,18 +11,28 @@ import java.math.BigDecimal;
 @Data
 public class UsageRankItemVO {
 
-    /** 用户 ID 或群组 ID */
+    /**
+     * 用户 ID 或群组 ID
+     */
     private Long id;
 
-    /** 用户名或群组名称 */
+    /**
+     * 用户名或群组名称
+     */
     private String name;
 
-    /** 总请求次数 */
+    /**
+     * 总请求次数
+     */
     private Long totalRequests;
 
-    /** 总 token 消耗数 */
+    /**
+     * 总 token 消耗数
+     */
     private Long totalTokens;
 
-    /** 总成本金额（元） */
+    /**
+     * 总成本金额（元）
+     */
     private BigDecimal totalCost;
 }

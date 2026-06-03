@@ -7,5 +7,4 @@ public final class LlmModule {
     private LlmModule() {}
 
     public static final String QA = "QA";
-    public static final String ASSISTANT = "ASSISTANT";
 }

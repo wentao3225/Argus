@@ -6,9 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 import java.io.InputStream;
 import java.util.List;
@@ -22,9 +20,9 @@ import java.util.concurrent.TimeUnit;
  * <p>
  * 提供文件的上传、下载、服务端合并（compose）和删除功能。
  * <p>
- * <b>注入条件：</b>必须同时配置 {@code storage.minio.endpoint}、
- * {@code storage.minio.access-key} 和 {@code storage.minio.secret-key} 三项，
- * 否则 Spring 会注入 {@link MissingObjectStorageService} 作为替代 Bean。
+ * <b>注入条件：</b>通过 {@link MinioProperties} 绑定 {@code storage.minio.*} 配置，
+ * 三个必需项（endpoint、access-key、secret-key）由 {@code @NotBlank} 校验；
+ * 任一缺失则 Spring Boot 启动报错，同时 {@link MissingObjectStorageService} 作为降级 Bean。
  * <p>
  * <b>桶管理：</b>上传和合并操作前会自动检测目标桶是否存在，不存在则创建。
  * 使用「双重检查锁定 + ConcurrentHashMap 缓存」保证线程安全和高性能——
@@ -63,20 +61,7 @@ public class MinioStorageService implements ObjectStorageService {
      */
     private final Set<String> readyBuckets = ConcurrentHashMap.newKeySet();
 
-    /**
-     * 通过 Spring 环境变量构造 MinIO 客户端并完成初始化。
-     * <p>
-     * 会依次读取 {@code storage.minio.endpoint}、{@code storage.minio.access-key}、
-     * {@code storage.minio.secret-key} 三个必需配置项，任一缺失则启动失败。
-     *
-     * @param environment Spring {@link Environment}，用于读取存储配置
-     * @throws BusinessException 任一必需配置项缺失或为空时抛出
-     */
-    public MinioStorageService(Environment environment) {
-        String endpoint = requiredProperty(environment, "storage.minio.endpoint");
-        String accessKey = requiredProperty(environment, "storage.minio.access-key");
-        String secretKey = requiredProperty(environment, "storage.minio.secret-key");
-        this.bucket = environment.getProperty("storage.minio.bucket", "argus-rag-documents");
+    public MinioStorageService(MinioProperties properties) {
         OkHttpClient httpClient = new OkHttpClient.Builder()
                 .connectionPool(new ConnectionPool(50, 5, TimeUnit.MINUTES))
                 .connectTimeout(10, TimeUnit.SECONDS)
@@ -84,11 +69,12 @@ public class MinioStorageService implements ObjectStorageService {
                 .writeTimeout(60, TimeUnit.SECONDS)
                 .build();
         this.minioClient = MinioClient.builder()
-                .endpoint(endpoint)
-                .credentials(accessKey, secretKey)
+                .endpoint(properties.getEndpoint())
+                .credentials(properties.getAccessKey(), properties.getSecretKey())
                 .httpClient(httpClient)
                 .build();
-        log.info("MinIO 对象存储已初始化: endpoint={}, defaultBucket={}", endpoint, bucket);
+        this.bucket = properties.getBucket();
+        log.info("MinIO 对象存储已初始化: endpoint={}, defaultBucket={}", properties.getEndpoint(), bucket);
     }
 
     /**
@@ -264,24 +250,4 @@ public class MinioStorageService implements ObjectStorageService {
         }
     }
 
-    /**
-     * 从 Spring 环境中安全读取必需配置项——缺失或为空时立即抛出明确异常。
-     * <p>
-     * 该方法在构造阶段调用，确保配置问题在应用启动时就被发现（「早暴露、早修复」）。
-     *
-     * @param environment  Spring 环境对象
-     * @param propertyName 配置项完整路径（如 {@code "storage.minio.endpoint"}）
-     * @return 配置项的值（保证非空、非空白）
-     * @throws BusinessException 配置项不存在或为空白字符串时抛出，
-     *                           提示用户检查 {@code application.yml}
-     */
-    private String requiredProperty(Environment environment, String propertyName) {
-        String value = environment.getProperty(propertyName);
-        if (!StringUtils.hasText(value)) {
-            throw new BusinessException(
-                    "对象存储配置缺失: " + propertyName
-                            + "，请在 application.yml / 环境变量中配置 storage.minio.* 相关属性");
-        }
-        return value;
-    }
 }

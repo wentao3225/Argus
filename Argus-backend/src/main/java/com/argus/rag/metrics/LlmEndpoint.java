@@ -8,6 +8,4 @@ public final class LlmEndpoint {
 
     public static final String QA_ASK = "qa/ask";
     public static final String QA_STREAM_ASK = "qa/stream-ask";
-    public static final String ASSISTANT_CHAT = "assistant/chat";
-    public static final String ASSISTANT_CHAT_STREAM = "assistant/chat/stream";
 }
