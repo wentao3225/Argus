@@ -192,7 +192,7 @@ npm install
 npm run dev                # 端口 5173
 ```
 
-开发环境（`--spring.profiles.active=dev`）自动创建管理员：`admin` / `admin123`
+首次使用需在数据库中手动创建管理员账户，或通过注册接口注册。
 
 <br/>
 

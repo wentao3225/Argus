@@ -135,6 +135,7 @@ Argus-frontend/src/
 
 ## Dev Environment
 
-- Dev profile (`--spring.profiles.active=dev`) auto-seeds admin: `admin` / `admin123`
+- `application-dev.yml` (dev profile config, tracked in git)
+- `application-local.yml` (local overrides, not in git)
 - Frontend dev server proxies `/api` to `http://localhost:10001` (configurable via `VITE_DEV_PROXY_TARGET`)
 - API docs (Knife4j): `http://localhost:10001/doc.html`
