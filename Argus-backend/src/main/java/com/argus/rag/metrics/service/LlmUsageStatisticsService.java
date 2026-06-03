@@ -18,22 +18,30 @@ public class LlmUsageStatisticsService {
         this.llmUsageRecordMapper = llmUsageRecordMapper;
     }
 
-    /** 用户级别统计 */
+    /**
+     * 用户级别统计
+     */
     public UsageStatsVO getUserStats(Long userId, StatsPeriod period) {
         return llmUsageRecordMapper.selectUsageStats(userId, null, period.getStartTime());
     }
 
-    /** 群组级别统计 */
+    /**
+     * 群组级别统计
+     */
     public UsageStatsVO getGroupStats(Long groupId, StatsPeriod period) {
         return llmUsageRecordMapper.selectUsageStats(null, groupId, period.getStartTime());
     }
 
-    /** 平台级别统计（管理员） */
+    /**
+     * 平台级别统计（管理员）
+     */
     public UsageStatsVO getPlatformStats(StatsPeriod period) {
         return llmUsageRecordMapper.selectUsageStats(null, null, period.getStartTime());
     }
 
-    /** 仪表盘概览 */
+    /**
+     * 仪表盘概览
+     */
     public MetricsOverviewVO getOverview() {
         MetricsOverviewVO overview = new MetricsOverviewVO();
 
@@ -51,17 +59,23 @@ public class LlmUsageStatisticsService {
         return overview;
     }
 
-    /** 每日趋势数据 */
+    /**
+     * 每日趋势数据
+     */
     public List<MetricsOverviewVO.DailyStats> getDailyTrend(StatsPeriod period, String module) {
         return llmUsageRecordMapper.selectDailyTrend(period.getStartTime(), module);
     }
 
-    /** 用户排行 */
+    /**
+     * 用户排行
+     */
     public List<UsageRankItemVO> getUserRank(StatsPeriod period, int limit) {
         return llmUsageRecordMapper.selectUserRank(period.getStartTime(), limit);
     }
 
-    /** 群组排行 */
+    /**
+     * 群组排行
+     */
     public List<UsageRankItemVO> getGroupRank(StatsPeriod period, int limit) {
         return llmUsageRecordMapper.selectGroupRank(period.getStartTime(), limit);
     }

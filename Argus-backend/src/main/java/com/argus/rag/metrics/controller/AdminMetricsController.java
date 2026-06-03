@@ -26,14 +26,18 @@ public class AdminMetricsController {
         this.statisticsService = statisticsService;
     }
 
-    /** 仪表盘概览 */
+    /**
+     * 仪表盘概览
+     */
     @GetMapping("/overview")
     public ApiResponse<MetricsOverviewVO> getOverview() {
         currentUserService.requireSystemAdmin();
         return ApiResponse.success(statisticsService.getOverview());
     }
 
-    /** 平台整体统计 */
+    /**
+     * 平台整体统计
+     */
     @GetMapping("/platform")
     public ApiResponse<UsageStatsVO> getPlatformStats(
             @RequestParam(defaultValue = "TODAY") StatsPeriod period) {
@@ -41,7 +45,9 @@ public class AdminMetricsController {
         return ApiResponse.success(statisticsService.getPlatformStats(period));
     }
 
-    /** 用户级别统计 */
+    /**
+     * 用户级别统计
+     */
     @GetMapping("/user/{userId}")
     public ApiResponse<UsageStatsVO> getUserStats(
             @PathVariable Long userId,
@@ -50,7 +56,9 @@ public class AdminMetricsController {
         return ApiResponse.success(statisticsService.getUserStats(userId, period));
     }
 
-    /** 群组级别统计 */
+    /**
+     * 群组级别统计
+     */
     @GetMapping("/group/{groupId}")
     public ApiResponse<UsageStatsVO> getGroupStats(
             @PathVariable Long groupId,
@@ -59,7 +67,9 @@ public class AdminMetricsController {
         return ApiResponse.success(statisticsService.getGroupStats(groupId, period));
     }
 
-    /** 趋势数据（用于图表） */
+    /**
+     * 趋势数据（用于图表）
+     */
     @GetMapping("/trend")
     public ApiResponse<List<MetricsOverviewVO.DailyStats>> getTrend(
             @RequestParam(defaultValue = "LAST_30_DAYS") StatsPeriod period,
@@ -68,7 +78,9 @@ public class AdminMetricsController {
         return ApiResponse.success(statisticsService.getDailyTrend(period, module));
     }
 
-    /** 用户排行 */
+    /**
+     * 用户排行
+     */
     @GetMapping("/rank/users")
     public ApiResponse<List<UsageRankItemVO>> getUserRank(
             @RequestParam(defaultValue = "LAST_30_DAYS") StatsPeriod period,
@@ -77,7 +89,9 @@ public class AdminMetricsController {
         return ApiResponse.success(statisticsService.getUserRank(period, limit));
     }
 
-    /** 群组排行 */
+    /**
+     * 群组排行
+     */
     @GetMapping("/rank/groups")
     public ApiResponse<List<UsageRankItemVO>> getGroupRank(
             @RequestParam(defaultValue = "LAST_30_DAYS") StatsPeriod period,

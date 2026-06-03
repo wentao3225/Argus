@@ -10,9 +10,13 @@ import lombok.Data;
 @Data
 public class MetricsTrendRequest {
 
-    /** 统计时间段：TODAY / LAST_7_DAYS / LAST_14_DAYS / LAST_30_DAYS */
+    /**
+     * 统计时间段：TODAY / LAST_7_DAYS / LAST_14_DAYS / LAST_30_DAYS
+     */
     private StatsPeriod period;
 
-    /** 模块筛选，可选。值：QA / ASSISTANT */
+    /**
+     * 模块筛选，可选。值：QA / ASSISTANT
+     */
     private String module;
 }
