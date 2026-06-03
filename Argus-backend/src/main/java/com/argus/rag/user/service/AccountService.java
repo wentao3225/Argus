@@ -23,7 +23,6 @@ public class AccountService {
 
     private final UserMapper userMapper;
     private final PasswordHasher passwordHasher;
-    private final PasswordPolicyValidator passwordValidator;
     private final RefreshTokenService refreshTokenService;
 
     /**

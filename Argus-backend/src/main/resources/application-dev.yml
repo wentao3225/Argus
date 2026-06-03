@@ -1,6 +1,9 @@
 spring:
   application:
     name: argus-service
+  config:
+    import:
+    - classpath:application-local.yml
   datasource:
     url: ${datasource.url}
     username: ${datasource.username}
