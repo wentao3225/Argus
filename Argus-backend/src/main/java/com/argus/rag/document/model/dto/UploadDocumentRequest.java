@@ -16,10 +16,14 @@ import org.springframework.web.multipart.MultipartFile;
 @Data
 public class UploadDocumentRequest {
 
-    /** 目标群组 ID，文档将归属于该群组 */
+    /**
+     * 目标群组 ID，文档将归属于该群组
+     */
     private Long groupId;
 
-    /** 要上传的文件内容 */
+    /**
+     * 要上传的文件内容
+     */
     private MultipartFile file;
 
 }

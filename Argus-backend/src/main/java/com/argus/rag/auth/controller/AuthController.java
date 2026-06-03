@@ -24,7 +24,7 @@ import org.springframework.web.bind.annotation.*;
  * 刷新令牌通过 httpOnly Cookie 下发，前端无需手动处理。
  */
 @RestController
-@RequestMapping("/api/auth")
+@RequestMapping("/auth")
 @RequiredArgsConstructor
 public class AuthController {
 

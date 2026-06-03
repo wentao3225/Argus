@@ -2,8 +2,7 @@ package com.argus.rag.qa.service;
 
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.qa.model.QueryPlanResult;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
@@ -23,12 +22,13 @@ import java.util.Set;
  * 并生成对应的检索语句列表。规划失败时自动回退为 DIRECT 策略。
  * </p>
  */
+@Slf4j
 @Service
 public class QueryPlanningService {
 
-    private static final Logger log = LoggerFactory.getLogger(QueryPlanningService.class);
-
-    /** 检索语句最大数量限制 */
+    /**
+     * 检索语句最大数量限制
+     */
     private static final int MAX_QUERY_COUNT = 3;
 
     private final ChatClient queryPlanningChatClient;
@@ -61,11 +61,8 @@ public class QueryPlanningService {
     public QueryPlanResult plan(String question) {
         String normalizedQuestion = requireQuestion(question);
         try {
-
             Prompt planPrompt = queryPlanningUserPromptTemplate.create(Map.of("question", normalizedQuestion));
-
             QueryPlanResult rawResult = queryPlanningChatClient.prompt(planPrompt)
-//                    .user(user -> user.text(renderUserPrompt(normalizedQuestion)))
                     .call()
                     .entity(QueryPlanResult.class);
             QueryPlanResult validatedPlan = validatePlan(rawResult, normalizedQuestion);
@@ -83,10 +80,12 @@ public class QueryPlanningService {
      */
     private QueryPlanResult validatePlan(QueryPlanResult rawResult, String originalQuestion) {
         if (rawResult == null || rawResult.strategy() == null) {
+            log.warn("由于：rawResult == null || rawResult.strategy() == null。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         Set<String> normalizedQueries = normalizeQueries(rawResult.queries());
         if (normalizedQueries.isEmpty()) {
+            log.warn("由于：normalizedQueries.isEmpty()。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         List<String> finalQueries = switch (rawResult.strategy()) {
@@ -95,12 +94,15 @@ public class QueryPlanningService {
             case DECOMPOSE -> limitQueries(normalizedQueries);
         };
         if (finalQueries.isEmpty()) {
+            log.warn("由于：finalQueries.isEmpty()。查询规划回退~");
             return QueryPlanResult.fallback(originalQuestion);
         }
         return new QueryPlanResult(rawResult.strategy(), finalQueries);
     }
 
-    /** 构建 REWRITE 策略的检索语句：原始问题 + 重写后的语句 */
+    /**
+     * 构建 REWRITE 策略的检索语句：原始问题 + 重写后的语句
+     */
     private List<String> buildRewriteQueries(String originalQuestion, Set<String> normalizedQueries) {
         LinkedHashSet<String> rewriteQueries = new LinkedHashSet<>();
         rewriteQueries.add(originalQuestion);
@@ -108,7 +110,9 @@ public class QueryPlanningService {
         return limitQueries(rewriteQueries);
     }
 
-    /** 规范化检索语句：去除空白、去重 */
+    /**
+     * 规范化检索语句：去除空白、去重
+     */
     private Set<String> normalizeQueries(List<String> queries) {
         LinkedHashSet<String> normalizedQueries = new LinkedHashSet<>();
         if (queries == null) {
@@ -126,19 +130,25 @@ public class QueryPlanningService {
         return normalizedQueries;
     }
 
-    /** 限制检索语句数量不超过 {@link #MAX_QUERY_COUNT} */
+    /**
+     * 限制检索语句数量不超过 {@link #MAX_QUERY_COUNT}
+     */
     private List<String> limitQueries(Set<String> queries) {
         return queries.stream()
                 .limit(MAX_QUERY_COUNT)
                 .toList();
     }
 
-    /** 渲染用户提示词模板（当前未使用，保留备用） */
+    /**
+     * 渲染用户提示词模板（当前未使用，保留备用）
+     */
     private String renderUserPrompt(String question) {
         return queryPlanningUserPromptTemplate.render(Map.of("question", question));
     }
 
-    /** 校验问题非空并规范化空白字符 */
+    /**
+     * 校验问题非空并规范化空白字符
+     */
     private String requireQuestion(String question) {
         if (!StringUtils.hasText(question)) {
             throw new BusinessException("问题不能为空");

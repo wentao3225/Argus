@@ -5,7 +5,6 @@ import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.VectorStore;
 import org.springframework.ai.vectorstore.filter.Filter;
@@ -28,18 +27,27 @@ import java.util.*;
 @Slf4j
 public class VectorIngestionService {
 
-    /** 默认的向量写入批次大小 */
+    /**
+     * 默认的向量写入批次大小
+     */
     private static final int DEFAULT_ADD_BATCH_SIZE = 9;
 
-    /** Jackson 反序列化元数据 JSON 时复用的 {@link TypeReference} */
-    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() { };
+    /**
+     * Jackson 反序列化元数据 JSON 时复用的 {@link TypeReference}
+     */
+    private static final TypeReference<Map<String, Object>> MAP_TYPE_REFERENCE = new TypeReference<>() {
+    };
 
     private final VectorStore vectorStore;
 
-    /** 配置注入的向量写入批次大小，已通过 {@link #normalizeBatchSize} 校验 */
+    /**
+     * 配置注入的向量写入批次大小，已通过 {@link #normalizeBatchSize} 校验
+     */
     private final int addBatchSize;
 
-    /** 用于解析 chunk 的 metadataJson 字段 */
+    /**
+     * 用于解析 chunk 的 metadataJson 字段
+     */
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     /**

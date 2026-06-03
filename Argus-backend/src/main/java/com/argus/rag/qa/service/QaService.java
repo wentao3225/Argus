@@ -10,11 +10,12 @@ import com.argus.rag.metrics.model.dto.LlmUsageRecordDTO;
 import com.argus.rag.qa.model.dto.AskQuestionRequest;
 import com.argus.rag.qa.model.vo.AskQuestionResponse;
 import jakarta.servlet.http.HttpServletRequest;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.math.BigDecimal;
+
+import static com.argus.rag.qa.constant.QaConstant.MODEL_NAME;
 
 /**
  * 知识问答入口服务。
@@ -24,12 +25,9 @@ import java.math.BigDecimal;
  * 并在调用完成后记录 LLM 用量。
  * </p>
  */
+@Slf4j
 @Service
 public class QaService {
-
-    private static final Logger log = LoggerFactory.getLogger(QaService.class);
-    private static final String MODEL_NAME = "qwen-plus";
-
     private final GroupMembershipService groupMembershipService;
     private final QaChatService qaChatService;
     private final CurrentUserService currentUserService;
@@ -66,19 +64,20 @@ public class QaService {
      * 3. 记录 LLM 用量。
      * </p>
      *
-     * @param request            HTTP 请求对象，用于提取用户身份
      * @param askQuestionRequest 问答请求 DTO
      * @return 问答响应
      */
-    public AskQuestionResponse ask(HttpServletRequest request, AskQuestionRequest askQuestionRequest) {
+    public AskQuestionResponse ask(AskQuestionRequest askQuestionRequest) {
+        // 群组 ID
         Long groupId = askQuestionRequest.getGroupId();
+        // 群组可读权限校验
         groupMembershipService.requireGroupReadable(groupId);
+        // 当前用户 ID
         Long userId = currentUserService.getRequiredCurrentUser().userId();
-
+        // 调用提问
         QaChatService.AskResult result = qaChatService.askWithUsage(groupId, askQuestionRequest.getQuestion());
-
+        // 记录用量
         recordUsage(userId, groupId, LlmEndpoint.QA_ASK, result.usage(), true, null);
-
         return result.response();
     }
 

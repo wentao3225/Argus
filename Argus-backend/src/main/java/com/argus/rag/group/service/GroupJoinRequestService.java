@@ -38,7 +38,9 @@ public class GroupJoinRequestService {
         this.currentUserService = currentUserService;
     }
 
-    /** 提交加入群组申请 */
+    /**
+     * 提交加入群组申请
+     */
     @Transactional
     public Long submitJoinRequest(CreateJoinRequestRequest joinRequestRequest) {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
@@ -60,20 +62,26 @@ public class GroupJoinRequestService {
         return requestId;
     }
 
-    /** 查询当前用户的所有加入申请 */
+    /**
+     * 查询当前用户的所有加入申请
+     */
     public List<MyJoinRequestResponse> listMyJoinRequests() {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
         return groupJoinRequestMapper.selectMyJoinRequests(currentUser.userId());
     }
 
-    /** 查询指定群组的待处理加入申请（仅 OWNER 可查） */
+    /**
+     * 查询指定群组的待处理加入申请（仅 OWNER 可查）
+     */
     public List<OwnerJoinRequestResponse> listOwnerJoinRequests(Long groupId) {
         Long requiredGroupId = requirePositiveId(groupId, "groupId 非法");
         groupMembershipService.requireGroupOwner(requiredGroupId);
         return groupJoinRequestMapper.selectPendingJoinRequestsByGroupId(requiredGroupId);
     }
 
-    /** 审批通过加入申请 */
+    /**
+     * 审批通过加入申请
+     */
     @Transactional
     public void approveJoinRequest(Long groupId, Long requestId) {
         CurrentUserService.CurrentUser owner = requireOwnerAndLoadUser(groupId);
@@ -91,7 +99,9 @@ public class GroupJoinRequestService {
                 joinRequest.requestId(), joinRequest.groupId(), joinRequest.applicantUserId(), owner.userId());
     }
 
-    /** 拒绝加入申请 */
+    /**
+     * 拒绝加入申请
+     */
     @Transactional
     public void rejectJoinRequest(Long groupId, Long requestId) {
         CurrentUserService.CurrentUser owner = requireOwnerAndLoadUser(groupId);
@@ -179,14 +189,18 @@ public class GroupJoinRequestService {
         return count != null && count > 0;
     }
 
-    /** 群组摘要信息（内部使用） */
+    /**
+     * 群组摘要信息（内部使用）
+     */
     private record GroupSummary(
             /** 群组 ID */
             Long groupId
     ) {
     }
 
-    /** 加入申请信息（内部使用） */
+    /**
+     * 加入申请信息（内部使用）
+     */
     private record JoinRequest(
             /** 申请 ID */
             Long requestId,

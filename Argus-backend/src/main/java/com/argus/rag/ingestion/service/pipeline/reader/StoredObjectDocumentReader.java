@@ -2,9 +2,9 @@ package com.argus.rag.ingestion.service.pipeline.reader;
 
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.model.entity.DocumentEntity;
-import com.argus.rag.ingestion.service.pipeline.parser.DocumentParserFactory;
-import com.argus.rag.ingestion.service.pipeline.parser.DocumentParser;
 import com.argus.rag.engine.storage.ObjectStorageService;
+import com.argus.rag.ingestion.service.pipeline.parser.DocumentParser;
+import com.argus.rag.ingestion.service.pipeline.parser.DocumentParserFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.document.DocumentReader;
 import org.springframework.util.StringUtils;
@@ -28,22 +28,27 @@ import java.util.Map;
  * </ol>
  *
  * <p>source 字段使用 {@code minio://bucket/objectKey} 格式标识文档来源。
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 public class StoredObjectDocumentReader implements DocumentReader {
 
-    /** MinIO 来源前缀，用于构建文档的 source 元数据 */
+    /**
+     * MinIO 来源前缀，用于构建文档的 source 元数据
+     */
     private static final String MINIO_SOURCE_PREFIX = "minio://";
 
-    /** 对象存储服务，用于从 MinIO 下载文件 */
+    /**
+     * 对象存储服务，用于从 MinIO 下载文件
+     */
     private final ObjectStorageService storageService;
 
-    /** 解析器工厂，根据文件扩展名获取对应的文档解析器 */
+    /**
+     * 解析器工厂，根据文件扩展名获取对应的文档解析器
+     */
     private final DocumentParserFactory parserFactory;
 
-    /** 待读取的文档实体，包含存储桶、对象键、文件扩展名等元信息 */
+    /**
+     * 待读取的文档实体，包含存储桶、对象键、文件扩展名等元信息
+     */
     private final DocumentEntity documentEntity;
 
     /**
@@ -71,9 +76,13 @@ public class StoredObjectDocumentReader implements DocumentReader {
      */
     @Override
     public List<Document> get() {
+        // 文档实体校验
         validateDocumentEntity();
+        // 获取存储桶名称
         String bucket = resolveBucket();
+        // 获取对象存储键
         String objectKey = documentEntity.getStorageObjectKey();
+        // 获取解析器
         DocumentParser parser = parserFactory.getParser(documentEntity.getFileExt());
         try (InputStream inputStream = storageService.getObject(bucket, objectKey)) {
             String content = parser.parse(inputStream);

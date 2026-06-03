@@ -39,28 +39,37 @@ import java.util.List;
  *
  * <h3>不可实例化</h3>
  * <p>所有方法均为静态方法，构造器私有化以防止实例化。</p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 public final class TextDecodingSupport {
 
-    /** UTF-8 BOM 字节序列：EF BB BF */
+    /**
+     * UTF-8 BOM 字节序列：EF BB BF
+     */
     private static final byte[] UTF_8_BOM = new byte[]{(byte) 0xEF, (byte) 0xBB, (byte) 0xBF};
 
-    /** UTF-16 小端序 BOM 字节序列：FF FE */
+    /**
+     * UTF-16 小端序 BOM 字节序列：FF FE
+     */
     private static final byte[] UTF_16_LE_BOM = new byte[]{(byte) 0xFF, (byte) 0xFE};
 
-    /** UTF-16 大端序 BOM 字节序列：FE FF */
+    /**
+     * UTF-16 大端序 BOM 字节序列：FE FF
+     */
     private static final byte[] UTF_16_BE_BOM = new byte[]{(byte) 0xFE, (byte) 0xFF};
 
-    /** GB18030 编码实例，用于中文文本的回退解码 */
+    /**
+     * GB18030 编码实例，用于中文文本的回退解码
+     */
     private static final Charset GB18030 = Charset.forName("GB18030");
 
-    /** 无 BOM 时的回退编码列表，按优先级排列 */
+    /**
+     * 无 BOM 时的回退编码列表，按优先级排列
+     */
     private static final List<Charset> FALLBACK_CHARSETS = List.of(StandardCharsets.UTF_8, GB18030);
 
-    /** 私有构造器，防止实例化 */
+    /**
+     * 私有构造器，防止实例化
+     */
     private TextDecodingSupport() {
     }
 
@@ -70,11 +79,11 @@ public final class TextDecodingSupport {
      * <p>优先通过 BOM 判断编码，若无 BOM 则按 UTF-8 → GB18030 顺序回退尝试。
      * 所有解码均使用严格模式，确保不会静默替换非法字节。</p>
      *
-     * @param inputStream   包含文本内容的输入流，解码时将读取全部字节
+     * @param inputStream    包含文本内容的输入流，解码时将读取全部字节
      * @param failureMessage 解码失败时的业务异常消息
      * @return 解码后的字符串
      * @throws com.argus.rag.common.exception.BusinessException 当所有编码尝试均失败或读取异常时抛出，
-     *         异常消息使用 failureMessage 参数值
+     *                                                          异常消息使用 failureMessage 参数值
      */
     public static String decode(InputStream inputStream, String failureMessage) {
         try {

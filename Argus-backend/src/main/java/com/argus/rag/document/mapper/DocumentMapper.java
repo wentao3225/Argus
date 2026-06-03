@@ -1,9 +1,9 @@
 package com.argus.rag.document.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.argus.rag.document.model.dto.DocumentQuery;
 import com.argus.rag.document.model.entity.DocumentEntity;
 import com.argus.rag.document.model.vo.DocumentListItemVO;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

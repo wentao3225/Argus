@@ -1,6 +1,6 @@
 package com.argus.rag.ingestion.service.pipeline.parser;
 
-import com.argus.rag.ingestion.service.pipeline.parser.TextDecodingSupport;
+import org.springframework.stereotype.Component;
 
 import java.io.InputStream;
 
@@ -21,10 +21,8 @@ import java.io.InputStream;
  * <h3>异常处理</h3>
  * <p>如果编码检测失败或读取异常，将抛出包含 "TXT 文档解析失败" 消息的
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
+@Component
 public class TxtDocumentParser implements DocumentParser {
 
     /**

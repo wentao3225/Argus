@@ -15,25 +15,39 @@ import java.time.LocalDateTime;
 @Data
 public class GroupJoinRequest {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 群组 ID */
+    /**
+     * 群组 ID
+     */
     private Long groupId;
 
-    /** 申请人用户 ID */
+    /**
+     * 申请人用户 ID
+     */
     private Long applicantUserId;
 
-    /** 审批人用户 ID */
+    /**
+     * 审批人用户 ID
+     */
     private Long decidedByUserId;
 
-    /** 申请状态 */
+    /**
+     * 申请状态
+     */
     private GroupJoinRequestStatus status;
 
-    /** 申请时间 */
+    /**
+     * 申请时间
+     */
     private LocalDateTime createdAt;
 
-    /** 审批时间 */
+    /**
+     * 审批时间
+     */
     private LocalDateTime decidedAt;
 }

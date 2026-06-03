@@ -16,15 +16,25 @@ import java.util.stream.Collectors;
  */
 public class TextCleanupTransformer implements DocumentTransformer {
 
-    /** 代码块分隔符允许的最大缩进 */
+    /**
+     * 代码块分隔符允许的最大缩进
+     */
     private static final int MAX_FENCE_INDENT = 3;
-    /** 代码块分隔符的最小连续字符数 */
+    /**
+     * 代码块分隔符的最小连续字符数
+     */
     private static final int MIN_FENCE_LENGTH = 3;
-    /** 匹配控制字符的正则 */
+    /**
+     * 匹配控制字符的正则
+     */
     private static final Pattern CONTROL_CHARACTERS = Pattern.compile("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F]");
-    /** 匹配行内连续空格与制表符的正则 */
+    /**
+     * 匹配行内连续空格与制表符的正则
+     */
     private static final Pattern INLINE_WHITESPACE = Pattern.compile("[ \\t]+");
-    /** 匹配连续三个及以上换行的正则，用于压缩多余空行 */
+    /**
+     * 匹配连续三个及以上换行的正则，用于压缩多余空行
+     */
     private static final Pattern EXCESSIVE_BLANK_LINES = Pattern.compile("\\n{3,}");
 
     /**
@@ -103,7 +113,7 @@ public class TextCleanupTransformer implements DocumentTransformer {
             plainLines.add(line);
         }
 
-        if (openingFence != null && fenceLines != null) {
+        if (openingFence != null) {
             segments.add(String.join("\n", fenceLines));
         }
         appendPlainSegment(segments, plainLines);
@@ -179,7 +189,9 @@ public class TextCleanupTransformer implements DocumentTransformer {
         plainLines.clear();
     }
 
-    /** 代码块分隔符标记 */
+    /**
+     * 代码块分隔符标记
+     */
     private record FenceMarker(char marker, int length) {
     }
 }

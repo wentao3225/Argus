@@ -3,12 +3,11 @@ package com.argus.rag.ingestion.service.pipeline.parser;
 import java.io.InputStream;
 
 /**
- * 文档解析器接口，定义了解析器的核心契约。
+ * 文档解析策略接口，定义不同文档类型的解析行为。
  *
  * <h3>实现要求</h3>
  * <ul>
- *     <li>{@link #supports(String)} —— 声明当前解析器支持的文档格式。
- *         扩展名匹配应忽略大小写（如 "TXT" 与 "txt" 应同等对待）。</li>
+ *     <li>{@link #supports(String)} —— 声明当前解析策略是否支持指定扩展名。</li>
  *     <li>{@link #parse(InputStream)} —— 将输入流中的文档内容解析为纯文本字符串。
  *         实现类应自行管理输入流的关闭，并在解析失败时抛出明确的业务异常。</li>
  * </ul>
@@ -36,7 +35,7 @@ public interface DocumentParser {
      * @param inputStream 文档文件的输入流，由调用方负责关闭
      * @return 解析后的纯文本内容
      * @throws com.argus.rag.common.exception.BusinessException 当解析过程发生错误时抛出，
-     *         异常消息应指明具体文档类型
+     *                                                          异常消息应指明具体文档类型
      */
     String parse(InputStream inputStream);
 }

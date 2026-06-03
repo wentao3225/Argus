@@ -3,6 +3,7 @@ package com.argus.rag.ingestion.service.pipeline.parser;
 import com.argus.rag.common.exception.BusinessException;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -25,10 +26,8 @@ import java.io.InputStream;
  * <p>PDFBox 在遇到损坏文件、加密文件或非 PDF 格式时可能抛出多种异常
  * （如 {@link IOException}），解析器统一包装为包含 "PDF 文档解析失败" 消息的
  * {@link com.argus.rag.common.exception.BusinessException}。</p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
+@Component
 public class PdfDocumentParser implements DocumentParser {
 
     /**
@@ -51,7 +50,7 @@ public class PdfDocumentParser implements DocumentParser {
      * @param inputStream PDF 文件的输入流
      * @return 解析后的纯文本内容
      * @throws com.argus.rag.common.exception.BusinessException 当 PDF 文件损坏、
-     *         格式非法或读取异常时抛出
+     *                                                          格式非法或读取异常时抛出
      */
     @Override
     public String parse(InputStream inputStream) {

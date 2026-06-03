@@ -224,10 +224,14 @@ public class AuthService {
      * 确保用户名和邮箱未被占用
      */
     private void ensureUniqueIdentity(String username, String email) {
-        if (userMapper.exists(new LambdaQueryWrapper<User>().eq(User::getUsername, username))) {
+        LambdaQueryWrapper<User> usernameQuery = new LambdaQueryWrapper<>();
+        usernameQuery.apply("lower(username) = lower({0})", username);
+        if (userMapper.exists(usernameQuery)) {
             throw new BusinessException("用户名已存在");
         }
-        if (userMapper.exists(new LambdaQueryWrapper<User>().eq(User::getEmail, email))) {
+        LambdaQueryWrapper<User> emailQuery = new LambdaQueryWrapper<>();
+        emailQuery.apply("lower(email) = lower({0})", email);
+        if (userMapper.exists(emailQuery)) {
             throw new BusinessException("邮箱已存在");
         }
     }

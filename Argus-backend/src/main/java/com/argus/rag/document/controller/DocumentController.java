@@ -2,21 +2,14 @@ package com.argus.rag.document.controller;
 
 import com.argus.rag.auth.CurrentUserService;
 import com.argus.rag.common.api.ApiResponse;
+import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.document.model.dto.DocumentQuery;
 import com.argus.rag.document.model.dto.UploadChunkRequest;
 import com.argus.rag.document.model.dto.UploadDocumentRequest;
 import com.argus.rag.document.model.dto.UploadInitRequest;
-import com.argus.rag.document.model.vo.DocumentDownloadVO;
-import com.argus.rag.document.model.vo.DocumentListItemVO;
-import com.argus.rag.document.model.vo.DocumentPreviewVO;
-import com.argus.rag.document.model.vo.UploadInitResponse;
-import com.argus.rag.document.model.vo.UploadStatusResponse;
-import com.argus.rag.document.service.DocumentDeleteService;
-import com.argus.rag.document.service.DocumentDownloadService;
-import com.argus.rag.document.service.DocumentPreviewService;
-import com.argus.rag.document.service.DocumentQueryService;
-import com.argus.rag.document.service.DocumentUploadService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.argus.rag.document.model.vo.*;
+import com.argus.rag.document.service.*;
+import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.InputStreamResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -42,38 +35,34 @@ import java.util.List;
  * @since 1.0.0
  */
 @RestController
-@RequestMapping("/api/documents")
+@RequiredArgsConstructor
+@RequestMapping("/documents")
 public class DocumentController {
 
-    /** 文档上传服务（直接上传 + 分片上传） */
-    private final DocumentUploadService documentUploadService;
-    /** 文档查询服务 */
-    private final DocumentQueryService documentQueryService;
-    /** 文档删除与重试服务 */
-    private final DocumentDeleteService documentDeleteService;
-    /** 文档预览服务 */
-    private final DocumentPreviewService documentPreviewService;
-    /** 文档下载服务 */
-    private final DocumentDownloadService documentDownloadService;
-    /** 当前用户服务 */
-    private final CurrentUserService currentUserService;
-
     /**
-     * 构造文档控制器，注入所有拆分后的文档服务和当前用户服务。
+     * 文档上传服务（直接上传 + 分片上传）
      */
-    public DocumentController(DocumentUploadService documentUploadService,
-                              DocumentQueryService documentQueryService,
-                              DocumentDeleteService documentDeleteService,
-                              DocumentPreviewService documentPreviewService,
-                              DocumentDownloadService documentDownloadService,
-                              CurrentUserService currentUserService) {
-        this.documentUploadService = documentUploadService;
-        this.documentQueryService = documentQueryService;
-        this.documentDeleteService = documentDeleteService;
-        this.documentPreviewService = documentPreviewService;
-        this.documentDownloadService = documentDownloadService;
-        this.currentUserService = currentUserService;
-    }
+    private final DocumentUploadService documentUploadService;
+    /**
+     * 文档查询服务
+     */
+    private final DocumentQueryService documentQueryService;
+    /**
+     * 文档删除与重试服务
+     */
+    private final DocumentDeleteService documentDeleteService;
+    /**
+     * 文档预览服务
+     */
+    private final DocumentPreviewService documentPreviewService;
+    /**
+     * 文档下载服务
+     */
+    private final DocumentDownloadService documentDownloadService;
+    /**
+     * 当前用户服务
+     */
+    private final CurrentUserService currentUserService;
 
     /**
      * 初始化分片上传会话。
@@ -82,15 +71,13 @@ public class DocumentController {
      * 需要调用者是群组管理员。
      *
      * @param uploadRequest 上传初始化请求（包含文件名、大小、哈希、分片大小和分片数量等）
-     * @param request       HTTP 请求（用于提取当前用户信息）
      * @return 上传初始化响应，包含 uploadId 及分片参数；若秒传成功则返回已完成文档 ID
      * @throws BusinessException 参数校验失败、群组不存在、无权限时抛出
      */
     @PostMapping(path = "/upload/init", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ApiResponse<UploadInitResponse> initUpload(
-            @RequestBody UploadInitRequest uploadRequest,
-            HttpServletRequest request) {
-        return ApiResponse.success(documentUploadService.initUpload(request, uploadRequest));
+            @RequestBody UploadInitRequest uploadRequest) {
+        return ApiResponse.success(documentUploadService.initUpload(uploadRequest));
     }
 
     /**
@@ -100,31 +87,27 @@ public class DocumentController {
      * 返回当前上传会话的最新状态。
      *
      * @param uploadRequest 分片上传请求（包含 uploadId、chunkIndex、分片数据和哈希）
-     * @param request       HTTP 请求（用于提取当前用户信息）
      * @return 当前上传状态，包含已上传分片列表和进度信息
      * @throws BusinessException 会话不存在、分片序号越界、分片数据为空或超限时抛出
      */
     @PostMapping(path = "/upload/chunks", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ApiResponse<UploadStatusResponse> uploadChunk(
-            @ModelAttribute UploadChunkRequest uploadRequest,
-            HttpServletRequest request) {
-        documentUploadService.uploadChunk(request, uploadRequest);
-        return ApiResponse.success(documentUploadService.getUploadStatus(request, uploadRequest.uploadId()));
+            @ModelAttribute UploadChunkRequest uploadRequest) {
+        documentUploadService.uploadChunk(uploadRequest);
+        return ApiResponse.success(documentUploadService.getUploadStatus(uploadRequest.uploadId()));
     }
 
     /**
      * 查询分片上传会话的当前状态。
      *
      * @param uploadId 上传会话 ID
-     * @param request  HTTP 请求（用于提取当前用户信息）
      * @return 上传状态，包含已上传分片索引列表、已上传分片数量、总分片数
      * @throws BusinessException 会话不存在、不属于当前用户、已过期或已完成时抛出
      */
     @GetMapping("/upload/{uploadId}")
     public ApiResponse<UploadStatusResponse> getUploadStatus(
-            @PathVariable String uploadId,
-            HttpServletRequest request) {
-        return ApiResponse.success(documentUploadService.getUploadStatus(request, uploadId));
+            @PathVariable String uploadId) {
+        return ApiResponse.success(documentUploadService.getUploadStatus(uploadId));
     }
 
     /**
@@ -133,15 +116,13 @@ public class DocumentController {
      * <p>校验所有分片已就位，调用对象存储合并分片，创建关联的文档记录并触发异步 ETL 处理。
      *
      * @param uploadId 上传会话 ID
-     * @param request  HTTP 请求（用于提取当前用户信息）
      * @return 新创建的文档 ID
      * @throws BusinessException 会话不存在、分片缺失、无权限、合并存储失败时抛出
      */
     @PostMapping("/upload/{uploadId}/complete")
     public ApiResponse<Long> completeUpload(
-            @PathVariable String uploadId,
-            HttpServletRequest request) {
-        return ApiResponse.success(documentUploadService.completeUpload(request, uploadId));
+            @PathVariable String uploadId) {
+        return ApiResponse.success(documentUploadService.completeUpload(uploadId));
     }
 
     /**
@@ -193,8 +174,7 @@ public class DocumentController {
     public ApiResponse<Void> deleteDocument(
             @PathVariable Long documentId,
             @RequestParam Long groupId) {
-        CurrentUserService.CurrentUser user = currentUserService.requireBusinessUser();
-        documentDeleteService.softDeleteDocument(user.userId(), groupId, documentId);
+        documentDeleteService.softDeleteDocument(groupId, documentId);
         return ApiResponse.success(null);
     }
 
@@ -213,8 +193,7 @@ public class DocumentController {
     public ApiResponse<Void> retryDocumentIngestion(
             @PathVariable Long documentId,
             @RequestParam Long groupId) {
-        CurrentUserService.CurrentUser user = currentUserService.requireBusinessUser();
-        documentDeleteService.retryFailedDocumentIngestion(user.userId(), groupId, documentId);
+        documentDeleteService.retryFailedDocumentIngestion(groupId, documentId);
         return ApiResponse.success(null);
     }
 
@@ -234,8 +213,7 @@ public class DocumentController {
     public ApiResponse<DocumentPreviewVO> previewDocument(
             @PathVariable Long documentId,
             @RequestParam Long groupId) {
-        CurrentUserService.CurrentUser user = currentUserService.requireBusinessUser();
-        return ApiResponse.success(documentPreviewService.previewDocument(user.userId(), groupId, documentId));
+        return ApiResponse.success(documentPreviewService.previewDocument(groupId, documentId));
     }
 
     /**
@@ -255,8 +233,7 @@ public class DocumentController {
     public ResponseEntity<InputStreamResource> downloadDocument(
             @PathVariable Long documentId,
             @RequestParam Long groupId) {
-        CurrentUserService.CurrentUser user = currentUserService.requireBusinessUser();
-        DocumentDownloadVO downloadInfo = documentDownloadService.downloadDocument(user.userId(), groupId, documentId);
+        DocumentDownloadVO downloadInfo = documentDownloadService.downloadDocument(groupId, documentId);
         InputStreamResource resource = new InputStreamResource(downloadInfo.getInputStream());
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(downloadInfo.getContentType()))

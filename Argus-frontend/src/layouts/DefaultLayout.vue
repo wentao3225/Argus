@@ -47,7 +47,6 @@ const activeMenu = computed(() => {
   const path = route.path
   if (path.startsWith('/app/documents')) return 'documents'
   if (path.startsWith('/app/qa')) return 'qa'
-  if (path.startsWith('/app/assistant')) return 'assistant'
   if (path.startsWith('/app/groups')) return 'groups'
   if (path.startsWith('/app/admin/metrics')) return 'metrics'
   if (path.startsWith('/app/admin')) return 'admin'
@@ -69,13 +68,6 @@ const allMenuItems = [
     label: '知识库问答',
     icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="11" cy="11" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M19 19L16 16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
     path: '/app/qa',
-    roles: ['USER'] as const,
-  },
-  {
-    key: 'assistant',
-    label: 'AI 助手',
-    icon: `<svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M8.5 12C8.5 10.067 10.067 8.5 12 8.5C13.933 8.5 15.5 10.067 15.5 12C15.5 13.933 13.933 15.5 12 15.5C10.067 15.5 8.5 13.933 8.5 12Z" stroke="currentColor" stroke-width="1.5"/><path d="M18.5 8.5L20 7M5.5 8.5L4 7M18.5 15.5L20 17M5.5 15.5L4 17" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>`,
-    path: '/app/assistant',
     roles: ['USER'] as const,
   },
   {

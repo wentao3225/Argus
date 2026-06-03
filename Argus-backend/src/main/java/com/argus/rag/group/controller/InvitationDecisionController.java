@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/invitations")
+@RequestMapping("/invitations")
 public class InvitationDecisionController {
 
     private final GroupManagementService groupManagementService;
@@ -22,21 +22,27 @@ public class InvitationDecisionController {
         this.groupManagementService = groupManagementService;
     }
 
-    /** 接受群组邀请 */
+    /**
+     * 接受群组邀请
+     */
     @PostMapping("/{invitationId}/accept")
     public ApiResponse<Void> acceptInvitation(@PathVariable Long invitationId) {
         groupManagementService.acceptInvitation(invitationId);
         return ApiResponse.success(null);
     }
 
-    /** 拒绝群组邀请 */
+    /**
+     * 拒绝群组邀请
+     */
     @PostMapping("/{invitationId}/reject")
     public ApiResponse<Void> rejectInvitation(@PathVariable Long invitationId) {
         groupManagementService.rejectInvitation(invitationId);
         return ApiResponse.success(null);
     }
 
-    /** 取消群组邀请 */
+    /**
+     * 取消群组邀请
+     */
     @PostMapping("/{invitationId}/cancel")
     public ApiResponse<Void> cancelInvitation(@PathVariable Long invitationId) {
         groupManagementService.cancelInvitation(invitationId);

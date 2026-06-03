@@ -12,13 +12,13 @@ import java.util.List;
  * @since 1.0.0
  */
 public record UploadStatusResponse(
-        /** 上传会话当前状态（UPLOADING/MERGING/UPLOADED/FAILED） */
+        /* 上传会话当前状态（UPLOADING/MERGING/UPLOADED/FAILED） */
         String status,
-        /** 已成功上传的分片序号列表 */
+        /* 已成功上传的分片序号列表 */
         List<Integer> uploadedChunks,
-        /** 已上传的分片数量 */
+        /* 已上传的分片数量 */
         Integer uploadedChunkCount,
-        /** 总分片数量，用于计算上传进度百分比 */
+        /* 总分片数量，用于计算上传进度百分比 */
         Integer chunkCount
 ) {
 }

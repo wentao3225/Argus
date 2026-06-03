@@ -4,7 +4,6 @@
 <img src="https://img.shields.io/badge/Spring_Boot-3.5-6DB33F?style=for-the-badge&logo=springboot&logoColor=white" alt="Spring Boot 3.5"/>
 <img src="https://img.shields.io/badge/Vue-3.5-4FC08D?style=for-the-badge&logo=vuedotjs&logoColor=white" alt="Vue 3.5"/>
 <img src="https://img.shields.io/badge/PostgreSQL-16-4169E1?style=for-the-badge&logo=postgresql&logoColor=white" alt="PostgreSQL 16"/>
-<img src="https://img.shields.io/badge/Elasticsearch-8.x-005571?style=for-the-badge&logo=elasticsearch&logoColor=white" alt="Elasticsearch 8.x"/>
 <img src="https://img.shields.io/badge/License-MIT-yellow?style=for-the-badge" alt="License MIT"/>
 
 </div>
@@ -19,11 +18,11 @@
 </h1>
 
 <p align="center">
-  <strong>融合 RAG 与 AI Agent 技术的企业级智能知识平台</strong>
+  <strong>融合 RAG 技术的企业级智能知识库平台</strong>
 </p>
 
 <p align="center">
-  让每一次提问都有据可查 —— 文档上传 · 智能解析 · 混合检索 · AI 对话 · 引用溯源
+  让每一次提问都有据可查 —— 文档上传 · 智能解析 · 混合检索 · 引用溯源
 </p>
 
 <p align="center">
@@ -50,7 +49,6 @@
 |------|-----------------|
 | 🔮 **幻觉编造** | 混合检索 + 证据评估 + 结构化输出，确保回答基于真实文档，无法回答时主动拒答 |
 | 📚 **知识割裂** | 自动文档解析 → 切片 → 向量化 → 索引，打通从文件到知识的全链路 |
-| 🧠 **无记忆对话** | ReactAgent + 三级短期记忆压缩，支持跨轮次的上下文感知对话 |
 
 <br/>
 
@@ -67,7 +65,7 @@
 ```
 文档上传 → 智能解析 → 文本切片
     ↓
-向量嵌入（PGvector HNSW） + 关键词索引（Elasticsearch IK）
+向量嵌入（PGvector HNSW） + 关键词索引（PG pg_trgm）
     ↓
 用户提问 → 查询规划（LLM） → 混合检索（RRF 融合）
     ↓
@@ -75,18 +73,6 @@
 ```
 
 **不是简单的"搜索 + GPT 包装"**，而是自研了查询规划、RRF 融合排序、四级证据评估等关键环节。
-
-</td>
-<td width="50%">
-
-### 🤖 AI Agent 对话引擎
-
-基于 **Spring AI Alibaba ReactAgent** 图执行引擎，支持：
-
-- **双模式切换**：纯对话（CHAT）/ 知识库检索（KB_SEARCH），同一会话内动态切换
-- **工具编排**：Agent 自主决定是否调用检索工具，每轮最多一次防止浪费
-- **SSE 流式输出**：模型回复逐字推送到前端，零等待体验
-- **短期记忆**：三级渐进压缩（会话记忆 → 紧凑摘要 → 运行时截断），在有限上下文窗口内维持长对话
 
 </td>
 </tr>
@@ -98,7 +84,7 @@
 **向量语义检索 + 关键词全文检索** 双通道并行，RRF（Reciprocal Rank Fusion）融合排序：
 
 - **语义匹配**：PGvector + HNSW 索引 + COSINE_DISTANCE，捕捉语义相似性
-- **精确匹配**：Elasticsearch + IK 中文分词 + BM25，精准命中专业术语
+- **精确匹配**：PostgreSQL `pg_trgm` 三字符组相似度匹配，精准命中专业术语
 - **证据增强**：类簇聚合 + 邻居窗口扩展，补充上下文避免碎片化
 
 </td>
@@ -107,9 +93,9 @@
 ### 🛡️ 企业级安全体系
 
 - **三级角色权限**：Admin / Group Owner / Member，最小权限原则
-- **JWT 双令牌**：Access Token（15min）+ Refresh Token（httpOnly Cookie + 数据库 Rotation）
+- **JWT 双令牌**：Access Token（30min）+ Refresh Token（httpOnly Cookie + 数据库 Rotation）
 - **BCrypt 密码加密** + 强制修改密码
-- **群组数据隔离**：向量检索和 ES 检索均附加 `groupId` 过滤，防止跨群组数据泄露
+- **群组数据隔离**：向量检索和关键词检索均附加 `groupId` 过滤，防止跨群组数据泄露
 - **AOP 操作日志**：关键操作全程留痕
 
 </td>
@@ -136,26 +122,22 @@ graph TB
         E[文档管理<br/>分片上传/预览/下载/软删除]
         F[ETL 流水线<br/>解析/清洗/切片/向量化/索引]
         G[知识问答<br/>查询规划/混合检索/证据评估/回答生成]
-        H[AI 助手<br/>ReactAgent/会话管理/短期记忆/SSE流式]
     end
 
     subgraph 数据与检索引擎
-        I[(PostgreSQL<br/>+ pgvector<br/>HNSW 向量索引)]
-        J[(Elasticsearch<br/>+ IK 分词器<br/>关键词检索)]
+        I[(PostgreSQL<br/>+ pgvector + pg_trgm<br/>向量 + 关键词检索)]
         K[(MinIO<br/>对象存储<br/>文档持久化)]
     end
 
     subgraph AI 模型层
-        L[DashScope<br/>通义千问 Chat]
-        M[DashScope<br/>text-embedding-v3]
+        L[Kimi / DashScope<br/>Chat + Embedding]
     end
 
     A --> B
-    B --> C & D & E & F & G & H
+    B --> C & D & E & F & G
     E --> K
-    F --> I & J & K
-    G --> I & J & L
-    H --> G & L
+    F --> I & K
+    G --> I & L
     E -.->|Spring Event 异步触发| F
 ```
 
@@ -181,20 +163,7 @@ graph TB
 - **LLM 查询规划**：自动判断 DIRECT / REWRITE / DECOMPOSE 策略，最多 3 条并行检索
 - **RRF 双通道融合**：向量 + 关键词结果统一排序，类簇聚合 + 邻居窗口扩展
 - **四级证据评估**：NONE → WEAK → PARTIAL → SUFFICIENT，证据不足时主动拒答
-- **引用溯源**：每条回答附带引用片段、来源文档、相关性评分
-
-### 🤖 AI 智能助手
-
-- **ReactAgent 图执行引擎**："思考 → 工具调用 → 生成回复"完整链路
-- **CHAT / KB_SEARCH 双模式**：纯对话 or 知识库检索，同一会话内动态切换
-- **BEFORE_MODEL Hook**：模型调用前自动注入上下文（compact summary → session memory → recent messages）
-- **短期记忆三级压缩**：
-  - L1 会话记忆（增量 LLM 摘要，保留关键事实和决策）
-  - L2 紧凑摘要（精炼的历史压缩，丢弃冗余细节）
-  - L3 运行时截断（Token 超 50000 时的最后防线）
-- **SSE 流式输出**：Delta 去重 + AGENT_MODEL_FINISHED 兜底
-
-<br/>
+- **引用溯源**：每条回答附带引用片段、来源文档、相关性评分<br/>
 
 ## 🛠️ 技术栈
 
@@ -205,12 +174,10 @@ graph TB
 | 语言 | **Java** | 21 | Record 语法、虚拟线程、模式匹配 |
 | 框架 | **Spring Boot** | 3.5.0 | Spring MVC，Jakarta EE 9+ |
 | ORM | **MyBatis-Plus** | 3.5.15 | Lambda 类型安全查询 |
-| 数据库 | **PostgreSQL + pgvector** | 16+ | HNSW 向量索引，COSINE_DISTANCE |
-| 搜索引擎 | **Elasticsearch** | 8.x | IK 中文分词，JDK HttpClient 直连 |
+| 数据库 | **PostgreSQL + pgvector** | 16+ | HNSW 向量索引，COSINE_DISTANCE，pg_trgm 关键词检索 |
 | 对象存储 | **MinIO** | latest | S3 兼容，`composeObject` 合并分片 |
-| AI Chat | **Spring AI Alibaba** | 1.1.2.0 | DashScope 原生集成（通义千问） |
-| AI Agent | **Spring AI Alibaba Agent** | 1.1.2.0 | ReactAgent 图执行引擎 |
-| AI Embedding | **Spring AI** | 1.1.2 | OpenAI 兼容模式，512 维向量 |
+| AI Chat | **Spring AI OpenAI** | 1.1.2 | Kimi API（OpenAI 兼容），模型 kimi-k2.6 |
+| AI Embedding | **Spring AI OpenAI** | 1.1.2 | DashScope text-embedding-v3（OpenAI 兼容），512 维向量 |
 | 认证 | **JJWT** | 0.12.6 | HMAC-SHA256 JWT 签发与解析 |
 | 密码加密 | **Spring Security Crypto** | — | BCrypt 自适应哈希 |
 | 文档解析 | **Apache PDFBox / POI** | 2.0.31 / 5.2.5 | PDF + DOCX 文本提取 |
@@ -234,10 +201,9 @@ graph TB
 
 | 组件 | 用途 |
 |------|------|
-| **PostgreSQL + pgvector** | 关系型主存储 + HNSW 向量索引（512 维，COSINE_DISTANCE） |
-| **Elasticsearch 8.x** | IK 中文分词 + BM25 关键词检索 + 两阶段 bool/rescore 打分 |
+| **PostgreSQL + pgvector + pg_trgm** | 关系型主存储 + HNSW 向量索引（512 维，COSINE_DISTANCE）+ 三字符组关键词检索 |
 | **MinIO** | S3 兼容对象存储，分片合并（composeObject），条件装配 |
-| **DashScope** | 通义千问 Chat 模型 + text-embedding-v3 Embedding 模型 |
+| **Kimi API + DashScope** | Kimi Chat（moonshot-v1 / kimi-k2.6）+ DashScope text-embedding-v3 Embedding |
 
 <br/>
 
@@ -249,10 +215,10 @@ graph TB
 |------|---------|------|
 | **JDK** | 21 | Record 语法、虚拟线程 |
 | **Node.js** | ≥ 20.19 | 前端构建 |
-| **PostgreSQL** | 16+ | 需安装 `pgvector` 扩展 |
-| **Elasticsearch** | 8.x | 需安装 IK 中文分词器插件 |
+| **PostgreSQL** | 16+ | 需安装 `pgvector` 和 `pg_trgm` 扩展 |
 | **MinIO** | latest | 对象存储（可按需启用） |
-| **DashScope API Key** | — | LLM Chat + Embedding 共用 |
+| **Kimi API Key** | — | Chat 模型调用 |
+| **DashScope API Key** | — | Embedding 模型调用 |
 
 ### 1️⃣ 初始化中间件
 
@@ -260,8 +226,9 @@ graph TB
 <summary><b>PostgreSQL + pgvector</b></summary>
 
 ```bash
-# 安装 pgvector 扩展
+# 安装 pgvector 和 pg_trgm 扩展
 psql -h <host> -U <user> -d <database> -c "CREATE EXTENSION IF NOT EXISTS vector;"
+psql -h <host> -U <user> -d <database> -c "CREATE EXTENSION IF NOT EXISTS pg_trgm;"
 
 # 执行建表脚本
 psql -h <host> -U <user> -d <database> -f sql/schema.sql
@@ -282,23 +249,6 @@ docker run -d --name minio \
 ```
 </details>
 
-<details>
-<summary><b>Elasticsearch + IK 分词器</b></summary>
-
-```bash
-docker run -d --name elasticsearch \
-  -p 9200:9200 -p 9300:9300 \
-  -e "discovery.type=single-node" \
-  -e "xpack.security.enabled=false" \
-  elasticsearch:8.x
-
-# 安装 IK 分词器
-docker exec -it elasticsearch bin/elasticsearch-plugin install \
-  https://github.com/medcl/elasticsearch-analysis-ik/releases/download/v8.x/elasticsearch-analysis-ik-8.x.zip
-docker restart elasticsearch
-```
-</details>
-
 ### 2️⃣ 配置环境
 
 编辑 `Argus-backend/src/main/resources/application-local.yml`，填写数据库、中间件和 LLM 配置：
@@ -309,18 +259,18 @@ spring.datasource.url: jdbc:postgresql://localhost:5432/dd_rag
 spring.datasource.username: your_username
 spring.datasource.password: your_password
 
-# LLM
-spring.ai.dashscope.api-key: ${DASHSCOPE_API_KEY}
-spring.ai.openai.api-key: ${DASHSCOPE_API_KEY}  # 与 DashScope 共用 Key
+# Chat（Kimi）
+spring.ai.openai.api-key: ${KIMI_API_KEY}
+spring.ai.openai.base-url: https://api.moonshot.cn/v1
+
+# Embedding（DashScope）
+spring.ai.openai.embedding.api-key: ${DASHSCOPE_API_KEY}
+spring.ai.openai.embedding.base-url: https://dashscope.aliyuncs.com/compatible-mode
 
 # 对象存储（可选）
 storage.minio.endpoint: http://localhost:9000
 storage.minio.access-key: minioadmin
 storage.minio.secret-key: minioadmin
-
-# Elasticsearch
-elasticsearch.host: localhost
-elasticsearch.port: 9200
 ```
 
 ### 3️⃣ 启动后端
@@ -429,21 +379,7 @@ npm run dev
     ]
 }
 ```
-</details>
-
-### AI 助手 · `/api/assistant`
-
-| 方法 | 路径 | 说明 |
-|------|------|------|
-| POST | `/api/assistant/sessions` | 创建新会话 |
-| GET | `/api/assistant/sessions` | 会话列表 |
-| PATCH | `/api/assistant/sessions/{id}` | 重命名会话 |
-| DELETE | `/api/assistant/sessions/{id}` | 删除会话 |
-| POST | `/api/assistant/chat` | 同步聊天（CHAT / KB_SEARCH） |
-| POST | `/api/assistant/chat/stream` | 流式聊天（SSE，逐字推送） |
-| GET | `/api/assistant/sessions/{id}/context` | 获取会话上下文（含摘要） |
-
-<br/>
+</details><br/>
 
 ## 📁 项目结构
 
@@ -462,11 +398,7 @@ Argus/
 │       │       └── transformer/            #   文本清洗 + 结构感知切片
 │       ├── qa/                             # 知识库问答（查询规划/RRF 融合/证据评估）
 │       │   └── rag/                        #   混合检索引擎
-│       ├── assistant/                      # AI 助手（ReactAgent/短期记忆/SSE 流式）
-│       │   ├── agent/                      #   Agent 工厂 + 知识库检索工具
-│       │   ├── memory/                     #   三级短期记忆压缩
-│       │   └── service/                    #   对话编排 + 会话管理
-│       └── engine/                         # 基础设施（ES/PGvector/MinIO）
+│       └── engine/                         # 基础设施（PGvector/PG Search/MinIO）
 │
 ├── Argus-frontend/                         # Vue 3 前端
 │   └── src/
@@ -475,7 +407,6 @@ Argus/
 │       │   ├── HomeView.vue                #   产品首页
 │       │   ├── documents/                  #   文档管理
 │       │   ├── qa/                         #   知识库问答
-│       │   ├── assistant/                  #   AI 助手
 │       │   ├── groups/                     #   协作小组
 │       │   └── admin/                      #   用户管理
 │       ├── stores/                         # Pinia 状态管理
@@ -485,7 +416,7 @@ Argus/
 │   ├── V1.0-项目文档.md                    #   用户认证 + 群组管理
 │   ├── V2.0-项目文档.md                    #   文档上传 + ETL 流水线
 │   ├── V3.0-项目文档.md                    #   知识库问答（RAG）
-│   └── V4.0-项目文档.md                    #   AI 助手 Agent + 流式对话
+│   ├── V4.0-项目文档.md                    #   项目历史版本记录（V1~V4）
 │
 └── sql/
     └── schema.sql                          # 数据库建表 DDL
@@ -502,7 +433,6 @@ Argus 采用**渐进式迭代**的开发方式，每个版本聚焦一个核心�
 | **V1.0** | 🏗️ 基础设施 | 用户认证（JWT 双令牌）、群组协作（邀请/审批/角色）、项目骨架 |
 | **V2.0** | 📄 文档引擎 | 分片上传（断点续传/秒传）、ETL 流水线、双路检索（向量 + 关键词） |
 | **V3.0** | 🧠 RAG 问答 | 查询规划（LLM）、RRF 融合排序、四级证据评估、引用溯源 |
-| **V4.0** | 🤖 AI Agent | ReactAgent 图引擎、CHAT/KB_SEARCH 双模式、短期记忆三级压缩、SSE 流式 |
 
 > 详细的设计决策和技术文档请参阅 [`docs/`](docs/) 目录。
 

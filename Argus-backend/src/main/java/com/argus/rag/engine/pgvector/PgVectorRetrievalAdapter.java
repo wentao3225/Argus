@@ -2,7 +2,6 @@ package com.argus.rag.engine.pgvector;
 
 import com.argus.rag.common.exception.BusinessException;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.ai.vectorstore.SearchRequest;
 import org.springframework.ai.vectorstore.VectorStore;
@@ -41,7 +40,9 @@ import java.util.Map;
 @Slf4j
 public class PgVectorRetrievalAdapter {
 
-    /** Spring AI 向量存储实例，负责与底层 PgVector 交互 */
+    /**
+     * Spring AI 向量存储实例，负责与底层 PgVector 交互
+     */
     private final VectorStore vectorStore;
 
     /**

@@ -60,7 +60,9 @@ public class CitationAssembler {
         );
     }
 
-    /** 从元数据中安全读取 Long 类型值，非 Number 类型时返回 {@code null} */
+    /**
+     * 从元数据中安全读取 Long 类型值，非 Number 类型时返回 {@code null}
+     */
     private Long readLong(Map<String, Object> metadata, String key) {
         Object value = metadata.get(key);
         if (value instanceof Number number) {
@@ -69,7 +71,9 @@ public class CitationAssembler {
         return null;
     }
 
-    /** 从元数据中安全读取 Integer 类型值，非 Number 类型时返回 {@code null} */
+    /**
+     * 从元数据中安全读取 Integer 类型值，非 Number 类型时返回 {@code null}
+     */
     private Integer readInteger(Map<String, Object> metadata, String key) {
         Object value = metadata.get(key);
         if (value instanceof Number number) {
@@ -78,7 +82,9 @@ public class CitationAssembler {
         return null;
     }
 
-    /** 从元数据中读取检索评分，默认返回 0 */
+    /**
+     * 从元数据中读取检索评分，默认返回 0
+     */
     private double readScore(Map<String, Object> metadata) {
         Object value = metadata.get("score");
         if (value instanceof Number number) {
@@ -87,13 +93,17 @@ public class CitationAssembler {
         return 0D;
     }
 
-    /** 从元数据中安全读取 String 类型值，自动 trim，非 String 类型时返回 {@code null} */
+    /**
+     * 从元数据中安全读取 String 类型值，自动 trim，非 String 类型时返回 {@code null}
+     */
     private String readText(Map<String, Object> metadata, String key) {
         Object value = metadata.get(key);
         return value instanceof String text ? text.trim() : null;
     }
 
-    /** 从元数据中读取文件名，优先读取 "fileName"，回退读取 "documentName" */
+    /**
+     * 从元数据中读取文件名，优先读取 "fileName"，回退读取 "documentName"
+     */
     private String readFileName(Map<String, Object> metadata) {
         String fileName = readText(metadata, "fileName");
         if (StringUtils.hasText(fileName)) {

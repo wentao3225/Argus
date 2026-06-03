@@ -3,10 +3,8 @@ package com.argus.rag.engine.storage;
 import com.argus.rag.common.exception.BusinessException;
 import io.minio.*;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import okhttp3.ConnectionPool;
 import okhttp3.OkHttpClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnExpression;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Service;
@@ -31,8 +29,6 @@ import java.util.concurrent.TimeUnit;
  * <b>桶管理：</b>上传和合并操作前会自动检测目标桶是否存在，不存在则创建。
  * 使用「双重检查锁定 + ConcurrentHashMap 缓存」保证线程安全和高性能——
  * 已就绪的桶会被缓存，后续请求无需重复检查。
- *
- * @author Argus-RAG Team
  * @see ObjectStorageService         服务契约接口
  * @see MissingObjectStorageService  未配置时的降级占位实现
  */
@@ -42,19 +38,29 @@ import java.util.concurrent.TimeUnit;
 public class MinioStorageService implements ObjectStorageService {
 
 
-    /** MinIO SDK 中表示「流大小未知」的常量，用于 {@link PutObjectArgs} 的 partSize 参数 */
+    /**
+     * MinIO SDK 中表示「流大小未知」的常量，用于 {@link PutObjectArgs} 的 partSize 参数
+     */
     private static final long UNKNOWN_STREAM_SIZE = -1L;
 
-    /** MinIO 客户端实例，所有操作均通过该实例完成 */
+    /**
+     * MinIO 客户端实例，所有操作均通过该实例完成
+     */
     private final MinioClient minioClient;
 
-    /** 默认存储桶名称，由配置 {@code storage.minio.bucket} 决定，未配置时默认 {@code argus-rag-documents} */
+    /**
+     * 默认存储桶名称，由配置 {@code storage.minio.bucket} 决定，未配置时默认 {@code argus-rag-documents}
+     */
     private final String bucket;
 
-    /** 桶创建操作的全局互斥锁，确保多线程场景下不会重复建桶 */
+    /**
+     * 桶创建操作的全局互斥锁，确保多线程场景下不会重复建桶
+     */
     private final Object bucketLock = new Object();
 
-    /** 已确认存在的桶缓存（线程安全），命中时直接跳过建桶流程 */
+    /**
+     * 已确认存在的桶缓存（线程安全），命中时直接跳过建桶流程
+     */
     private final Set<String> readyBuckets = ConcurrentHashMap.newKeySet();
 
     /**
@@ -136,6 +142,7 @@ public class MinioStorageService implements ObjectStorageService {
     public void putObject(String bucket, String objectKey, InputStream inputStream,
                           long objectSize, String contentType) {
         try {
+            // 确保目标桶就绪
             ensureBucketExists(bucket);
             log.debug("上传 MinIO 对象: bucket={}, objectKey={}, size={}, contentType={}",
                     bucket, objectKey, objectSize, contentType);
@@ -174,6 +181,7 @@ public class MinioStorageService implements ObjectStorageService {
             throw new BusinessException("对象存储合并失败: 源对象列表不能为空");
         }
         try {
+            // 确保目标桶就绪
             ensureBucketExists(bucket);
             List<ComposeSource> sources = sourceObjectKeys.stream()
                     .map(sourceKey -> ComposeSource.builder()

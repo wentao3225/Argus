@@ -15,25 +15,39 @@ import java.time.LocalDateTime;
 @Data
 public class GroupInvitation {
 
-    /** 主键 */
+    /**
+     * 主键
+     */
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    /** 群组 ID */
+    /**
+     * 群组 ID
+     */
     private Long groupId;
 
-    /** 邀请人用户 ID */
+    /**
+     * 邀请人用户 ID
+     */
     private Long inviterUserId;
 
-    /** 被邀请人用户 ID */
+    /**
+     * 被邀请人用户 ID
+     */
     private Long inviteeUserId;
 
-    /** 邀请状态 */
+    /**
+     * 邀请状态
+     */
     private GroupInvitationStatus status;
 
-    /** 创建时间 */
+    /**
+     * 创建时间
+     */
     private LocalDateTime createdAt;
 
-    /** 更新时间 */
+    /**
+     * 更新时间
+     */
     private LocalDateTime updatedAt;
 }

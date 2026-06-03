@@ -1,7 +1,12 @@
+server:
+  port: 8080
+  servlet:
+    context-path: /api
 spring:
   profiles:
-    active: local
-
+    active: dev
+  application:
+    name: Argus-backend
 # ──────────────────────────────────────────────
 # MyBatis-Plus 配置
 # ──────────────────────────────────────────────
@@ -27,4 +32,3 @@ mybatis-plus:
     # 对比 EnumOrdinalTypeHandler（按序号存储，枚举顺序变化会导致数据错乱）
     # 当前项目所有枚举均为简单枚举（无 @EnumValue），按 name 存储最安全
     default-enum-type-handler: org.apache.ibatis.type.EnumTypeHandler
-

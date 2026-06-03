@@ -3,7 +3,6 @@ package com.argus.rag.document.service;
 import com.argus.rag.auth.CurrentUserService;
 import com.argus.rag.common.enums.DocumentStatus;
 import com.argus.rag.common.exception.BusinessException;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.argus.rag.document.mapper.DocumentMapper;
 import com.argus.rag.document.mapper.DocumentUploadChunkMapper;
 import com.argus.rag.document.mapper.DocumentUploadSessionMapper;
@@ -15,11 +14,13 @@ import com.argus.rag.document.model.entity.DocumentUploadChunkEntity;
 import com.argus.rag.document.model.entity.DocumentUploadSessionEntity;
 import com.argus.rag.document.model.vo.UploadInitResponse;
 import com.argus.rag.document.model.vo.UploadStatusResponse;
-import com.argus.rag.group.service.GroupMembershipService;
 import com.argus.rag.engine.storage.ObjectStorageService;
-import jakarta.servlet.http.HttpServletRequest;
+import com.argus.rag.group.service.GroupMembershipService;
+import com.argus.rag.ingestion.vector.VectorIngestionService;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -28,8 +29,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Set;
 import java.util.UUID;
+
+import static com.argus.rag.document.constant.DocumentConstant.*;
 
 /**
  * 大文件分片上传服务。
@@ -39,80 +41,40 @@ import java.util.UUID;
  * 支持文件哈希去重（秒传复用）和可续传会话恢复。
  *
  * <p>上传会话在 24 小时后过期。
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 @Service
 @Slf4j
+@RequiredArgsConstructor
 public class DocumentUploadService {
 
-
-    /** 文件名最大长度 */
-    private static final int MAX_FILE_NAME_LENGTH = 255;
-    /** Content-Type 最大长度 */
-    private static final int MAX_CONTENT_TYPE_LENGTH = 128;
-    /** 文件哈希最大长度 */
-    private static final int MAX_FILE_HASH_LENGTH = 128;
-    /** 文件扩展名最大长度 */
-    private static final int MAX_FILE_EXT_LENGTH = 16;
-    /** 分片上传最大文件大小：256MB */
-    private static final long MAX_FILE_SIZE = 256L * 1024 * 1024;
-    /** 单个分片的最大大小：10MB */
-    private static final long MAX_CHUNK_SIZE = 10L * 1024 * 1024;
-    /** 上传会话过期时长：24 小时 */
-    private static final long SESSION_EXPIRE_HOURS = 24L;
-    /** 支持的上传文件格式 */
-    private static final Set<String> SUPPORTED_EXTENSIONS = Set.of("txt", "md", "pdf", "docx");
-    /** 上传会话状态：已初始化 */
-    private static final String UPLOAD_STATUS_INIT = "INIT";
-    /** 上传会话状态：上传中 */
-    private static final String UPLOAD_STATUS_UPLOADING = "UPLOADING";
-    /** 上传会话状态：正在合并 */
-    private static final String UPLOAD_STATUS_COMPLETING = "COMPLETING";
-    /** 上传会话状态：已完成 */
-    private static final String UPLOAD_STATUS_COMPLETED = "COMPLETED";
-    /** 分片默认 MIME 类型 */
-    private static final String OCTET_STREAM = "application/octet-stream";
-    /** 直接上传最大文件大小：10MB */
-    private static final long MAX_DIRECT_FILE_SIZE = 10L * 1024 * 1024;
-
-    /** 文档数据访问 */
+    /**
+     * 文档数据访问
+     */
     private final DocumentMapper documentMapper;
-    /** 上传会话数据访问 */
+    /**
+     * 上传会话数据访问
+     */
     private final DocumentUploadSessionMapper documentUploadSessionMapper;
-    /** 上传分片数据访问 */
+    /**
+     * 上传分片数据访问
+     */
     private final DocumentUploadChunkMapper documentUploadChunkMapper;
-    /** 群组成员权限服务 */
+    /**
+     * 群组成员权限服务
+     */
     private final GroupMembershipService groupMembershipService;
-    /** 对象存储服务 */
+    /**
+     * 对象存储服务
+     */
     private final ObjectStorageService objectStorageService;
-    /** 向量导入服务 */
-    private final com.argus.rag.ingestion.vector.VectorIngestionService vectorIngestionService;
-    /** Elasticsearch chunk 索引服务 */
-    private final com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService elasticsearchChunkIndexService;
-    /** Spring 事件发布器 */
-    private final org.springframework.context.ApplicationEventPublisher applicationEventPublisher;
-
-    public DocumentUploadService(
-            DocumentMapper documentMapper,
-            DocumentUploadSessionMapper documentUploadSessionMapper,
-            DocumentUploadChunkMapper documentUploadChunkMapper,
-            GroupMembershipService groupMembershipService,
-            ObjectStorageService objectStorageService,
-            com.argus.rag.ingestion.vector.VectorIngestionService vectorIngestionService,
-            com.argus.rag.engine.elasticsearch.ElasticsearchChunkIndexService elasticsearchChunkIndexService,
-            org.springframework.context.ApplicationEventPublisher applicationEventPublisher
-    ) {
-        this.documentMapper = documentMapper;
-        this.documentUploadSessionMapper = documentUploadSessionMapper;
-        this.documentUploadChunkMapper = documentUploadChunkMapper;
-        this.groupMembershipService = groupMembershipService;
-        this.objectStorageService = objectStorageService;
-        this.vectorIngestionService = vectorIngestionService;
-        this.elasticsearchChunkIndexService = elasticsearchChunkIndexService;
-        this.applicationEventPublisher = applicationEventPublisher;
-    }
+    /**
+     * 向量导入服务
+     */
+    private final VectorIngestionService vectorIngestionService;
+    /**
+     * Spring 事件发布器
+     */
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 初始化分片上传会话。
@@ -125,17 +87,20 @@ public class DocumentUploadService {
      * </ol>
      * 需要调用者是群组管理员。
      *
-     * @param request       HTTP 请求（用于提取当前用户信息）
      * @param uploadRequest 上传初始化请求（文件名、大小、哈希、分片参数等）
      * @return 上传初始化响应（秒传返回 documentId，续传/新建返回 uploadId 和分片参数）
      * @throws BusinessException 参数校验失败、文件类型不支持、大小超限、无权限时抛出
      */
     @Transactional
-    public UploadInitResponse initUpload(HttpServletRequest request, UploadInitRequest uploadRequest) {
+    public UploadInitResponse initUpload(UploadInitRequest uploadRequest) {
+        // 校验初始化请求参数
         NormalizedInitRequest normalizedRequest = validateInitRequest(uploadRequest);
         Long groupId = normalizedRequest.groupId();
+        // 要求当前用户为目标群组 OWNER，否则抛出异常，返回当前用户
         CurrentUserService.CurrentUser currentUser = groupMembershipService.requireGroupOwner(groupId);
-        DocumentEntity existingDocument = documentMapper.selectByGroupIdAndFileHash(groupId, normalizedRequest.fileHash());
+        DocumentEntity existingDocument = documentMapper.
+                selectByGroupIdAndFileHash(groupId, normalizedRequest.fileHash());
+        // 秒传
         if (existingDocument != null && "READY".equals(existingDocument.getStatus())) {
             log.info("分片上传-秒传复用: groupId={}, userId={}, fileName={}, fileHash={}, reusedDocumentId={}",
                     groupId, currentUser.userId(), normalizedRequest.fileName(), normalizedRequest.fileHash(), existingDocument.getId());
@@ -147,6 +112,7 @@ public class DocumentUploadService {
             );
             return UploadInitResponse.instant(documentId);
         }
+        // 断点续传
         DocumentUploadSessionEntity existingSession = documentUploadSessionMapper.selectLatestReusableSession(
                 groupId,
                 currentUser.userId(),
@@ -156,7 +122,9 @@ public class DocumentUploadService {
             log.info("分片上传-续传恢复: groupId={}, userId={}, uploadId={}, fileName={}, fileHash={}, chunkSize={}, chunkCount={}",
                     groupId, currentUser.userId(), existingSession.getUploadId(), normalizedRequest.fileName(),
                     normalizedRequest.fileHash(), existingSession.getChunkSize(), existingSession.getChunkCount());
-            List<Integer> uploadedChunks = documentUploadChunkMapper.selectByUploadId(existingSession.getUploadId()).stream()
+            // 获取已上传的分片索引集合
+            List<Integer> uploadedChunks = documentUploadChunkMapper
+                    .selectByUploadId(existingSession.getUploadId()).stream()
                     .map(DocumentUploadChunkEntity::getChunkIndex)
                     .toList();
             return UploadInitResponse.uploadSession(
@@ -166,6 +134,7 @@ public class DocumentUploadService {
                     existingSession.getChunkCount()
             );
         }
+        // 分片上传:新建会话
         DocumentUploadSessionEntity session = buildUploadSession(groupId, currentUser.userId(), normalizedRequest);
         documentUploadSessionMapper.insert(session);
         log.info("分片上传-新建会话: groupId={}, userId={}, uploadId={}, fileName={}, fileHash={}, fileSize={}, chunkSize={}, chunkCount={}",
@@ -181,15 +150,15 @@ public class DocumentUploadService {
      * 使用 upsert 支持同一分片重复上传（幂等）。
      * 需要上传会话属于当前用户且未过期、未完成。
      *
-     * @param request       HTTP 请求（用于提取当前用户信息）
      * @param uploadRequest 分片上传请求（uploadId、chunkIndex、分片数据和哈希）
-     * @return 当前已上传的分片索引列表
      * @throws BusinessException 会话无效、分片越界、分片数据为空或超限时抛出
      */
     @Transactional
-    public List<Integer> uploadChunk(HttpServletRequest request, UploadChunkRequest uploadRequest) {
-        DocumentUploadSessionEntity session = requireOwnedActiveSession(request, uploadRequest.uploadId());
+    public void uploadChunk(UploadChunkRequest uploadRequest) {
+        DocumentUploadSessionEntity session = requireOwnedActiveSession(uploadRequest.uploadId());
+        // 校验分片上传请求
         MultipartFile chunk = requireChunk(uploadRequest, session);
+        // 规范化文件哈希
         String chunkHash = normalizeFileHash(uploadRequest.chunkHash());
         String objectKey = buildChunkObjectKey(session.getGroupId(), session.getUploadId(), uploadRequest.chunkIndex());
         log.debug("分片上传-接收分片: uploadId={}, chunkIndex={}/{}, chunkSize={}",
@@ -219,21 +188,28 @@ public class DocumentUploadService {
         uploadChunk.setUploadedAt(now);
         uploadChunk.setCreatedAt(now);
         uploadChunk.setUpdatedAt(now);
+        // 插入或更新分片元数据
         documentUploadChunkMapper.upsert(uploadChunk);
+        // 更新会话状态
         documentUploadSessionMapper.update(null, new LambdaUpdateWrapper<DocumentUploadSessionEntity>()
                 .eq(DocumentUploadSessionEntity::getUploadId, session.getUploadId())
                 .set(DocumentUploadSessionEntity::getStatus, UPLOAD_STATUS_UPLOADING)
                 .set(DocumentUploadSessionEntity::getMergedObjectKey, null)
                 .set(DocumentUploadSessionEntity::getUpdatedAt, now)
         );
-        List<Integer> uploadedChunkIndexes = documentUploadChunkMapper.selectByUploadId(session.getUploadId()).stream()
+        // 获取已上传的分片索引列表
+        List<Integer> uploadedChunkIndexes = documentUploadChunkMapper
+                .selectByUploadId(session.getUploadId()).stream()
                 .map(DocumentUploadChunkEntity::getChunkIndex)
                 .toList();
+        // 如果已上传分片数等于分片总数，则表示所有分片已上传完成
         if (uploadedChunkIndexes.size() == session.getChunkCount()) {
             log.info("分片上传-全部接收完成: uploadId={}, fileName={}, totalChunks={}",
                     session.getUploadId(), session.getFileName(), session.getChunkCount());
+        } else {
+            log.debug("分片上传-接收中: uploadId={}, fileName={}, totalChunks={}, uploadedChunks={}",
+                    session.getUploadId(), session.getFileName(), session.getChunkCount(), uploadedChunkIndexes);
         }
-        return uploadedChunkIndexes;
     }
 
     /**
@@ -243,26 +219,28 @@ public class DocumentUploadService {
      * <ol>
      *   <li>校验所有分片已按序就位</li>
      *   <li>调用对象存储合并分片为单一对象</li>
-     *   <li>委托 {@link DocumentService#finalizeUploadedDocument} 创建文档记录</li>
+     *   <li>委托  创建文档记录</li>
      *   <li>将上传会话标记为 COMPLETED</li>
      * </ol>
      * 合并失败时会尝试删除已合并的临时对象。
      * 需要上传会话属于当前用户且未过期、未完成。
      *
-     * @param request  HTTP 请求（用于提取当前用户信息）
      * @param uploadId 上传会话 ID
      * @return 新创建的文档 ID
      * @throws BusinessException 会话无效、分片缺失、合并失败、文档持久化失败时抛出
      */
     @Transactional
-    public Long completeUpload(HttpServletRequest request, String uploadId) {
-        DocumentUploadSessionEntity session = requireOwnedActiveSession(request, uploadId);
+    public Long completeUpload(String uploadId) {
+        // 查询并校验上传会话
+        DocumentUploadSessionEntity session = requireOwnedActiveSession(uploadId);
         List<DocumentUploadChunkEntity> chunks = documentUploadChunkMapper.selectByUploadId(uploadId).stream()
                 .sorted(Comparator.comparing(DocumentUploadChunkEntity::getChunkIndex))
                 .toList();
+        // 确保所有分片已按序就位
         ensureAllChunksPresent(session, chunks);
         log.info("分片上传-开始合并: uploadId={}, fileName={}, fileSize={}, chunkCount={}",
                 uploadId, session.getFileName(), session.getFileSize(), chunks.size());
+        // 构建最终对象键
         String objectKey = buildFinalObjectKey(session);
         LocalDateTime now = LocalDateTime.now();
         documentUploadSessionMapper.update(null, new LambdaUpdateWrapper<DocumentUploadSessionEntity>()
@@ -315,13 +293,12 @@ public class DocumentUploadService {
      * <p>返回会话状态、已上传分片索引列表、已上传分片数量、总分片数。
      * 需要上传会话属于当前用户且未过期、未完成。
      *
-     * @param request  HTTP 请求（用于提取当前用户信息）
      * @param uploadId 上传会话 ID
      * @return 上传状态信息
      * @throws BusinessException 会话无效时抛出
      */
-    public UploadStatusResponse getUploadStatus(HttpServletRequest request, String uploadId) {
-        DocumentUploadSessionEntity session = requireOwnedActiveSession(request, uploadId);
+    public UploadStatusResponse getUploadStatus(String uploadId) {
+        DocumentUploadSessionEntity session = requireOwnedActiveSession(uploadId);
         List<Integer> uploadedChunks = documentUploadChunkMapper.selectByUploadId(uploadId).stream()
                 .map(DocumentUploadChunkEntity::getChunkIndex)
                 .toList();
@@ -344,20 +321,28 @@ public class DocumentUploadService {
         if (uploadRequest == null) {
             throw new BusinessException("上传初始化请求不能为空");
         }
+        // 校验 GROUP ID
         Long groupId = requireGroupId(uploadRequest.groupId());
+        // 清洗文件名
         String fileName = sanitizeFileName(uploadRequest.fileName());
+        // 提取文件扩展名并校验
         String fileExt = extractFileExt(fileName);
+        //
         long fileSize = requirePositive(uploadRequest.fileSize(), "fileSize 非法");
         if (fileSize > MAX_FILE_SIZE) {
             throw new BusinessException("上传文件超过大小限制");
         }
+        // 规范化内容类型
         String contentType = normalizeContentType(uploadRequest.contentType());
+        // 规范化文件哈希
         String fileHash = normalizeFileHash(uploadRequest.fileHash());
+        // 校验 chunkSize
         long chunkSize = requirePositive(uploadRequest.chunkSize(), "chunkSize 非法");
         if (chunkSize > MAX_CHUNK_SIZE) {
             throw new BusinessException("chunkSize 超过限制");
         }
-        int chunkCount = requirePositive(uploadRequest.chunkCount(), "chunkCount 非法");
+        // 校验 chunkCount
+        int chunkCount = requirePositive(uploadRequest.chunkCount());
         long expectedChunkCount = (fileSize + chunkSize - 1) / chunkSize;
         if (chunkCount != expectedChunkCount) {
             throw new BusinessException("chunkCount 与文件大小不匹配");
@@ -471,14 +456,13 @@ public class DocumentUploadService {
     /**
      * 校验 Integer 值必须为正数。
      *
-     * @param value   待校验的值
-     * @param message 校验失败时的错误消息
+     * @param value 待校验的值
      * @return 合法的值
      * @throws BusinessException value 为 null 或 <= 0 时抛出
      */
-    private int requirePositive(Integer value, String message) {
+    private int requirePositive(Integer value) {
         if (value == null || value <= 0) {
-            throw new BusinessException(message);
+            throw new BusinessException("chunkCount 非法");
         }
         return value;
     }
@@ -486,12 +470,11 @@ public class DocumentUploadService {
     /**
      * 查询并校验上传会话：存在、属于当前用户、未过期、未完成。
      *
-     * @param request  HTTP 请求（用于提取当前用户信息）
      * @param uploadId 上传会话 ID
      * @return 合法的上传会话实体
      * @throws BusinessException uploadId 为空、会话不存在、不属于当前用户、已过期、已完成时抛出
      */
-    private DocumentUploadSessionEntity requireOwnedActiveSession(HttpServletRequest request, String uploadId) {
+    private DocumentUploadSessionEntity requireOwnedActiveSession(String uploadId) {
         if (!StringUtils.hasText(uploadId)) {
             throw new BusinessException("uploadId 非法");
         }
@@ -616,32 +599,8 @@ public class DocumentUploadService {
     }
 
     /**
-     * 规范化后的上传初始化请求参数，所有字段均已校验。
-     *
-     * @param groupId     群组 ID
-     * @param fileName    文件名
-     * @param fileExt     文件扩展名
-     * @param fileSize    文件大小（字节）
-     * @param contentType MIME 类型
-     * @param fileHash    文件哈希
-     * @param chunkSize   每个分片大小（字节）
-     * @param chunkCount  总分片数
+     * 直接上传文档（小文件模式），参数已由 Controller 提取 userId
      */
-    private record NormalizedInitRequest(
-            Long groupId,
-            String fileName,
-            String fileExt,
-            Long fileSize,
-            String contentType,
-            String fileHash,
-            Long chunkSize,
-            Integer chunkCount
-    ) {
-    }
-
-    // ────────────────────────────── 直接上传 ──────────────────────────────
-
-    /** 直接上传文档（小文件模式），参数已由 Controller 提取 userId */
     @Transactional
     public Long uploadDocument(Long userId, UploadDocumentRequest uploadRequest) {
         Long groupId = requireGroupId(uploadRequest.getGroupId());
@@ -671,10 +630,14 @@ public class DocumentUploadService {
         }
     }
 
-    /** 通过复用已有文档创建新文档记录（秒传） */
+    // ────────────────────────────── 直接上传 ──────────────────────────────
+
+    /**
+     * 通过复用已有文档创建新文档记录（秒传）
+     */
     @Transactional
     public Long createInstantUploadedDocument(Long groupId, Long userId,
-                                               DocumentEntity existingDocument, String fileName) {
+                                              DocumentEntity existingDocument, String fileName) {
         if (existingDocument == null) {
             throw new BusinessException("复用文档不存在");
         }
@@ -692,11 +655,13 @@ public class DocumentUploadService {
         return document.getId();
     }
 
-    /** 完成分片上传后的文档持久化 */
+    /**
+     * 完成分片上传后的文档持久化
+     */
     @Transactional
     public Long finalizeUploadedDocument(Long groupId, Long userId, String fileName,
-                                          String fileExt, String contentType, Long fileSize,
-                                          String fileHash, String bucket, String objectKey) {
+                                         String fileExt, String contentType, Long fileSize,
+                                         String fileHash, String bucket, String objectKey) {
         DocumentEntity document = persistAndFinalizeUploadedDocument(new FinalizedUploadCommand(
                 requireGroupId(groupId),
                 requirePositiveUserId(userId),
@@ -711,8 +676,6 @@ public class DocumentUploadService {
         return document.getId();
     }
 
-    // ──────────────────────── 直接上传辅助方法 ────────────────────────
-
     private MultipartFile requireValidFile(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BusinessException("上传文件不能为空");
@@ -722,6 +685,8 @@ public class DocumentUploadService {
         }
         return file;
     }
+
+    // ──────────────────────── 直接上传辅助方法 ────────────────────────
 
     private String extractDirectFileName(MultipartFile file) {
         String originalFileName = file.getOriginalFilename();
@@ -733,7 +698,15 @@ public class DocumentUploadService {
         return "groups/%d/users/%d/%s.%s".formatted(groupId, userId, fileId, fileExt);
     }
 
+    /**
+     * 直接上传文件到对象存储。
+     *
+     * @param bucket    目标存储桶名称
+     * @param objectKey 目标对象键路径
+     * @param file      待上传的MultipartFile文件
+     */
     private void uploadDirectFile(String bucket, String objectKey, MultipartFile file) {
+        // 将文件流写入对象存储，并规范化Content-Type
         try (java.io.InputStream inputStream = file.getInputStream()) {
             objectStorageService.putObject(bucket, objectKey, inputStream, file.getSize(),
                     normalizeContentType(file.getContentType()));
@@ -747,7 +720,7 @@ public class DocumentUploadService {
     }
 
     private void compensateUploadedDirectObject(String bucket, String objectKey,
-                                                 RuntimeException originalException) {
+                                                RuntimeException originalException) {
         try {
             objectStorageService.deleteObject(bucket, objectKey);
         } catch (RuntimeException compensationException) {
@@ -765,14 +738,11 @@ public class DocumentUploadService {
             log.warn("文档失败补偿时删除向量失败: documentId={}, reason={}",
                     document.getId(), exception.getMessage());
         }
-        try {
-            elasticsearchChunkIndexService.deleteDocumentChunks(document.getId());
-        } catch (RuntimeException exception) {
-            log.warn("文档失败补偿时删除 ES 索引失败: documentId={}, reason={}",
-                    document.getId(), exception.getMessage());
-        }
     }
 
+    /**
+     * 完成分片上传后的文档持久化
+     */
     private DocumentEntity persistAndFinalizeUploadedDocument(FinalizedUploadCommand command) {
         DocumentEntity document = buildDocument(command);
         documentMapper.insert(document);
@@ -785,6 +755,9 @@ public class DocumentUploadService {
         return document;
     }
 
+    /**
+     * 构建文档元数据
+     */
     private DocumentEntity buildDocument(FinalizedUploadCommand command) {
         LocalDateTime now = LocalDateTime.now();
         DocumentEntity document = new DocumentEntity();
@@ -828,6 +801,30 @@ public class DocumentUploadService {
             throw new BusinessException(message);
         }
         return value.trim();
+    }
+
+    /**
+     * 规范化后的上传初始化请求参数，所有字段均已校验。
+     *
+     * @param groupId     群组 ID
+     * @param fileName    文件名
+     * @param fileExt     文件扩展名
+     * @param fileSize    文件大小（字节）
+     * @param contentType MIME 类型
+     * @param fileHash    文件哈希
+     * @param chunkSize   每个分片大小（字节）
+     * @param chunkCount  总分片数
+     */
+    private record NormalizedInitRequest(
+            Long groupId,
+            String fileName,
+            String fileExt,
+            Long fileSize,
+            String contentType,
+            String fileHash,
+            Long chunkSize,
+            Integer chunkCount
+    ) {
     }
 
     record FinalizedUploadCommand(

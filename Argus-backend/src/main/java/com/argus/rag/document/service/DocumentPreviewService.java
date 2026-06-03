@@ -51,7 +51,7 @@ public class DocumentPreviewService {
      * 通过 {@link StoredObjectDocumentReader} 解析器提取纯文本，不做任何截断。
      * 需群组成员权限，文档必须处于 READY 状态。
      */
-    public DocumentPreviewVO previewDocument(Long userId, Long groupId, Long documentId) {
+    public DocumentPreviewVO previewDocument(Long groupId, Long documentId) {
         requireGroupId(groupId);
         groupMembershipService.requireGroupReadable(groupId);
         DocumentEntity document = loadDocument(documentId, groupId);

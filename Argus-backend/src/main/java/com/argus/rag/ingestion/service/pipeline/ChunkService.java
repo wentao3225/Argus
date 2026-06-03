@@ -6,7 +6,6 @@ import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
-import org.slf4j.LoggerFactory;
 import org.springframework.ai.document.Document;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,22 +27,38 @@ import java.util.*;
 @Slf4j
 public class ChunkService {
 
-    /** 切片摘要最大长度 */
+    /**
+     * 切片摘要最大长度
+     */
     private static final int CHUNK_SUMMARY_LENGTH = 120;
-    /** 默认切片策略标识 */
+    /**
+     * 默认切片策略标识
+     */
     private static final String DEFAULT_CHUNK_STRATEGY = "spring-ai-document";
-    /** 空切片错误消息 */
+    /**
+     * 空切片错误消息
+     */
     private static final String EMPTY_CHUNK_DOCUMENTS_MESSAGE = "文档切片结果为空，无法持久化";
-    /** 每条 INSERT 记录占用的参数个数 */
+    /**
+     * 每条 INSERT 记录占用的参数个数
+     */
     private static final int INSERT_BATCH_PARAMETER_COUNT = 10;
-    /** PostgreSQL 参数上限 */
+    /**
+     * PostgreSQL 参数上限
+     */
     private static final int POSTGRES_PARAMETER_LIMIT = 65_535;
-    /** 单批 INSERT 最大条数，受 {@code POSTGRES_PARAMETER_LIMIT} 限制。保留 128 个参数余量 */
+    /**
+     * 单批 INSERT 最大条数，受 {@code POSTGRES_PARAMETER_LIMIT} 限制。保留 128 个参数余量
+     */
     private static final int MAX_INSERT_BATCH_SIZE = (POSTGRES_PARAMETER_LIMIT - 128) / INSERT_BATCH_PARAMETER_COUNT;
 
-    /** 切片 Mapper */
+    /**
+     * 切片 Mapper
+     */
     private final DocumentChunkMapper documentChunkMapper;
-    /** JSON 序列化工具 */
+    /**
+     * JSON 序列化工具
+     */
     private final ObjectMapper objectMapper;
 
     /**
@@ -79,7 +94,9 @@ public class ChunkService {
         return chunks;
     }
 
-    /** 按 PostgreSQL 参数上限分批入库，避免单条 SQL 超长 */
+    /**
+     * 按 PostgreSQL 参数上限分批入库，避免单条 SQL 超长
+     */
     private void persistChunkBatches(List<DocumentChunkEntity> chunks) {
         if (chunks.size() <= MAX_INSERT_BATCH_SIZE) {
             documentChunkMapper.insertBatch(chunks);
@@ -91,7 +108,9 @@ public class ChunkService {
         }
     }
 
-    /** 从数据库反查自增主键并按 {@code chunkIndex} 回填到内存实体 */
+    /**
+     * 从数据库反查自增主键并按 {@code chunkIndex} 回填到内存实体
+     */
     private void backfillChunkIds(Long documentId, List<DocumentChunkEntity> chunks) {
         if (chunks.stream().allMatch(chunk -> chunk.getId() != null)) {
             return;
@@ -116,14 +135,18 @@ public class ChunkService {
         }
     }
 
-    /** 校验 {@code documentId} 和 {@code groupId} 均非空 */
+    /**
+     * 校验 {@code documentId} 和 {@code groupId} 均非空
+     */
     private void validateIdentifiers(Long documentId, Long groupId) {
         if (documentId == null || groupId == null) {
-            throw new BusinessException("切片前必须提供 documentId 和 groupId");
+            throw new BusinessException("持久化切片前必须提供 documentId 和 groupId");
         }
     }
 
-    /** 将 Spring AI {@link Document} 列表转换为 {@link DocumentChunkEntity} 列表，跳过空白文本 */
+    /**
+     * 将 Spring AI {@link Document} 列表转换为 {@link DocumentChunkEntity} 列表，跳过空白文本
+     */
     private List<DocumentChunkEntity> buildChunkDocuments(Long documentId, Long groupId, List<Document> documents) {
         if (documents == null || documents.isEmpty()) {
             throw new BusinessException(EMPTY_CHUNK_DOCUMENTS_MESSAGE);
@@ -143,7 +166,9 @@ public class ChunkService {
         return chunks;
     }
 
-    /** 统一换行符并去除首尾空白 */
+    /**
+     * 统一换行符并去除首尾空白
+     */
     private String normalizeChunkDocumentText(Document document) {
         if (document == null || document.getText() == null) {
             return "";
@@ -154,7 +179,9 @@ public class ChunkService {
                 .trim();
     }
 
-    /** 从元数据中解析字符范围，校验不可信时回退到自增计算 */
+    /**
+     * 从元数据中解析字符范围，校验不可信时回退到自增计算
+     */
     private ChunkRange resolveChunkRange(Map<String, Object> metadata, String chunkText, int fallbackStart) {
         ChunkRange fallbackRange = fallbackRange(fallbackStart, chunkText.length());
         Integer charStart = readMetadataInt(metadata, "charStart");
@@ -178,33 +205,45 @@ public class ChunkService {
         return fallbackRange;
     }
 
-    /** 基于上一个切片的结束位置计算回退范围 */
+    /**
+     * 基于上一个切片的结束位置计算回退范围
+     */
     private ChunkRange fallbackRange(int fallbackStart, int chunkLength) {
         int safeStart = Math.max(0, fallbackStart);
         return new ChunkRange(safeStart, safeAdd(safeStart, chunkLength));
     }
 
-    /** 校验 {@code charStart} 和 {@code charEnd} 与文本长度是否构成可信范围 */
+    /**
+     * 校验 {@code charStart} 和 {@code charEnd} 与文本长度是否构成可信范围
+     */
     private boolean isTrustedRange(int charStart, int charEnd, int chunkLength) {
         return isTrustedStart(charStart, chunkLength) && charEnd >= charStart + chunkLength;
     }
 
-    /** 校验 {@code charStart + chunkLength} 不溢出 Integer.MAX_VALUE */
+    /**
+     * 校验 {@code charStart + chunkLength} 不溢出 Integer.MAX_VALUE
+     */
     private boolean isTrustedStart(int charStart, int chunkLength) {
         return (long) charStart + chunkLength <= Integer.MAX_VALUE;
     }
 
-    /** 校验 {@code charEnd} 足以容纳文本长度 */
+    /**
+     * 校验 {@code charEnd} 足以容纳文本长度
+     */
     private boolean isTrustedEnd(int charEnd, int chunkLength) {
         return charEnd >= chunkLength;
     }
 
-    /** 安全加法，上限为 {@code Integer.MAX_VALUE} */
+    /**
+     * 安全加法，上限为 {@code Integer.MAX_VALUE}
+     */
     private int safeAdd(int value, int delta) {
         return (int) Math.min(Integer.MAX_VALUE, (long) Math.max(0, value) + delta);
     }
 
-    /** 构建单个 {@link DocumentChunkEntity}，填充全部业务字段与时间戳 */
+    /**
+     * 构建单个 {@link DocumentChunkEntity}，填充全部业务字段与时间戳
+     */
     private DocumentChunkEntity buildChunk(Long documentId, Long groupId, int chunkIndex, String chunkText,
                                            int charStart, int charEnd, Map<String, Object> metadata) {
         LocalDateTime now = LocalDateTime.now();
@@ -222,7 +261,9 @@ public class ChunkService {
         return chunk;
     }
 
-    /** 截取前 {@code CHUNK_SUMMARY_LENGTH} 个字符生成摘要，超长追加 {@code "..."} */
+    /**
+     * 截取前 {@code CHUNK_SUMMARY_LENGTH} 个字符生成摘要，超长追加 {@code "..."}
+     */
     private String buildSummary(String chunkText) {
         if (chunkText.length() <= CHUNK_SUMMARY_LENGTH) {
             return chunkText;
@@ -230,12 +271,16 @@ public class ChunkService {
         return chunkText.substring(0, CHUNK_SUMMARY_LENGTH) + "...";
     }
 
-    /** 序列化元数据 JSON，合并来源元数据并补充系统字段 */
+    /**
+     * 序列化元数据 JSON，合并来源元数据并补充系统字段
+     */
     private String buildMetadataJson(Long documentId, Long groupId, int chunkIndex, int charStart, int charEnd) {
         return buildMetadataJson(documentId, groupId, chunkIndex, charStart, charEnd, Map.of());
     }
 
-    /** 序列化元数据 JSON，合并来源元数据并补充系统字段 */
+    /**
+     * 序列化元数据 JSON，合并来源元数据并补充系统字段
+     */
     private String buildMetadataJson(Long documentId, Long groupId, int chunkIndex, int charStart, int charEnd,
                                      Map<String, Object> sourceMetadata) {
         Map<String, Object> metadata = new LinkedHashMap<>();
@@ -256,7 +301,9 @@ public class ChunkService {
         }
     }
 
-    /** 从元数据中安全读取整型值，无法解析或越界时返回 {@code null} */
+    /**
+     * 从元数据中安全读取整型值，无法解析或越界时返回 {@code null}
+     */
     private Integer readMetadataInt(Map<String, Object> metadata, String key) {
         if (metadata == null || !metadata.containsKey(key) || metadata.get(key) == null) {
             return null;
@@ -276,12 +323,16 @@ public class ChunkService {
         return null;
     }
 
-    /** 从元数据中安全读取字符串，不存在时返回 {@code null} */
+    /**
+     * 从元数据中安全读取字符串，不存在时返回 {@code null}
+     */
     private String readMetadataString(Map<String, Object> metadata, String key) {
         return readMetadataString(metadata, key, null);
     }
 
-    /** 从元数据中安全读取字符串，不存在时返回默认值 */
+    /**
+     * 从元数据中安全读取字符串，不存在时返回默认值
+     */
     private String readMetadataString(Map<String, Object> metadata, String key, String defaultValue) {
         if (metadata == null || !metadata.containsKey(key)) {
             return defaultValue;
@@ -290,6 +341,9 @@ public class ChunkService {
         return value == null ? defaultValue : String.valueOf(value);
     }
 
-    /** 字符位置范围 */
-    private record ChunkRange(int charStart, int charEnd) {}
+    /**
+     * 字符位置范围
+     */
+    private record ChunkRange(int charStart, int charEnd) {
+    }
 }

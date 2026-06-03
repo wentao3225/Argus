@@ -7,9 +7,9 @@ import com.argus.rag.common.enums.GroupStatus;
 import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.group.mapper.GroupJoinRequestMapper;
 import com.argus.rag.group.mapper.GroupMembershipMapper;
-import com.argus.rag.group.model.entity.GroupInvitation;
 import com.argus.rag.group.model.dto.CreateGroupRequest;
 import com.argus.rag.group.model.dto.CreateInvitationRequest;
+import com.argus.rag.group.model.entity.GroupInvitation;
 import com.argus.rag.group.model.vo.GroupMemberResponse;
 import com.argus.rag.group.model.vo.MySentInvitationResponse;
 import lombok.extern.slf4j.Slf4j;
@@ -20,6 +20,9 @@ import org.springframework.util.StringUtils;
 import java.util.List;
 import java.util.UUID;
 
+import static com.argus.rag.group.constant.GroupConstant.MAX_GROUP_DESCRIPTION_LENGTH;
+import static com.argus.rag.group.constant.GroupConstant.MAX_GROUP_NAME_LENGTH;
+
 /**
  * 群组管理服务，提供群组创建、成员管理、邀请管理等功能。
  */
@@ -27,8 +30,6 @@ import java.util.UUID;
 @Service
 public class GroupManagementService {
 
-    private static final int MAX_GROUP_NAME_LENGTH = 128;
-    private static final int MAX_GROUP_DESCRIPTION_LENGTH = 512;
     private final GroupMembershipMapper groupMembershipMapper;
     private final GroupJoinRequestMapper groupJoinRequestMapper;
     private final GroupMembershipService groupMembershipService;
@@ -46,7 +47,9 @@ public class GroupManagementService {
         this.currentUserService = currentUserService;
     }
 
-    /** 创建新群组，创建者自动成为 OWNER */
+    /**
+     * 创建新群组，创建者自动成为 OWNER
+     */
     @Transactional
     public Long createGroup(CreateGroupRequest createGroupRequest) {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
@@ -64,7 +67,9 @@ public class GroupManagementService {
         return groupId;
     }
 
-    /** 创建群组邀请（仅 OWNER 可操作） */
+    /**
+     * 创建群组邀请（仅 OWNER 可操作）
+     */
     @Transactional
     public Long createInvitation(Long groupId, CreateInvitationRequest createInvitationRequest) {
         Long requiredGroupId = requirePositiveId(groupId, "groupId 非法");
@@ -83,7 +88,9 @@ public class GroupManagementService {
         return invitationId;
     }
 
-    /** 接受群组邀请 */
+    /**
+     * 接受群组邀请
+     */
     @Transactional
     public void acceptInvitation(Long invitationId) {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
@@ -100,7 +107,9 @@ public class GroupManagementService {
         log.info("接受群组邀请: invitationId={}, groupId={}, userId={}", invitation.id(), invitation.groupId(), invitation.inviteeUserId());
     }
 
-    /** 拒绝群组邀请 */
+    /**
+     * 拒绝群组邀请
+     */
     @Transactional
     public void rejectInvitation(Long invitationId) {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
@@ -111,7 +120,9 @@ public class GroupManagementService {
         log.info("拒绝群组邀请: invitationId={}, groupId={}, userId={}", invitation.id(), invitation.groupId(), invitation.inviteeUserId());
     }
 
-    /** 取消群组邀请（仅群组 OWNER 可操作） */
+    /**
+     * 取消群组邀请（仅群组 OWNER 可操作）
+     */
     @Transactional
     public void cancelInvitation(Long invitationId) {
         Invitation invitation = loadInvitation(invitationId);
@@ -121,20 +132,26 @@ public class GroupManagementService {
         log.info("取消群组邀请: invitationId={}, groupId={}", invitation.id(), invitation.groupId());
     }
 
-    /** 查询当前用户发出的所有邀请 */
+    /**
+     * 查询当前用户发出的所有邀请
+     */
     public List<MySentInvitationResponse> listMySentInvitations() {
         CurrentUserService.CurrentUser currentUser = currentUserService.requireBusinessUser();
         return groupMembershipMapper.selectSentInvitationsByInviterUserId(currentUser.userId());
     }
 
-    /** 查询群组成员列表（仅 OWNER 可查） */
+    /**
+     * 查询群组成员列表（仅 OWNER 可查）
+     */
     public List<GroupMemberResponse> listMembers(Long groupId) {
         Long requiredGroupId = requirePositiveId(groupId, "groupId 非法");
         groupMembershipService.requireGroupOwner(requiredGroupId);
         return groupMembershipMapper.selectMembersByGroupId(requiredGroupId);
     }
 
-    /** 移除群组成员（仅 OWNER 可操作，不能移除 OWNER） */
+    /**
+     * 移除群组成员（仅 OWNER 可操作，不能移除 OWNER）
+     */
     @Transactional
     public void removeMember(Long groupId, Long userId) {
         Long requiredGroupId = requirePositiveId(groupId, "groupId 非法");
@@ -151,7 +168,9 @@ public class GroupManagementService {
         log.info("移除群组成员: groupId={}, userId={}", requiredGroupId, requiredUserId);
     }
 
-    /** 退出群组（OWNER 不能退出自己的组） */
+    /**
+     * 退出群组（OWNER 不能退出自己的组）
+     */
     @Transactional
     public void leaveGroup(Long groupId) {
         Long requiredGroupId = requirePositiveId(groupId, "groupId 非法");
@@ -264,17 +283,19 @@ public class GroupManagementService {
         return count != null && count > 0;
     }
 
-    /** 邀请信息（内部使用） */
+    /**
+     * 邀请信息（内部使用）
+     */
     private record Invitation(
-            /** 邀请 ID */
+            /* 邀请 ID */
             Long id,
-            /** 群组 ID */
+            /* 群组 ID */
             Long groupId,
-            /** 邀请人用户 ID */
+            /* 邀请人用户 ID */
             Long inviterUserId,
-            /** 被邀请人用户 ID */
+            /* 被邀请人用户 ID */
             Long inviteeUserId,
-            /** 邀请状态 */
+            /* 邀请状态 */
             String status
     ) {
     }

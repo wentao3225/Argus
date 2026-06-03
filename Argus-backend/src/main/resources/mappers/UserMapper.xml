@@ -7,7 +7,8 @@
         select id, user_code, username, email, display_name, password_hash,
                system_role, status, must_change_password
         from users
-        where username = #{loginId} or email = #{loginId}
+         where lower(username) = lower(#{loginId})
+            or lower(email) = lower(#{loginId})
         order by id
         for update
     </select>

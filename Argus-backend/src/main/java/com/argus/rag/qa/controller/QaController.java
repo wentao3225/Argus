@@ -28,7 +28,7 @@ import java.util.Map;
  * </p>
  */
 @RestController
-@RequestMapping("/api/qa")
+@RequestMapping("/qa")
 @OperationLog
 public class QaController {
 
@@ -58,20 +58,18 @@ public class QaController {
      * </p>
      *
      * @param askQuestionRequest 问答请求，包含群组 ID 和问题文本
-     * @param request            HTTP 请求对象，用于提取当前用户身份信息
      * @return 问答响应，包含回答内容或拒答原因及引用来源
      */
     @PostMapping("/ask")
     public AskQuestionResponse askQuestion(
-            @Valid @RequestBody AskQuestionRequest askQuestionRequest,
-            HttpServletRequest request) {
-        return qaService.ask(request, askQuestionRequest);
+            @Valid @RequestBody AskQuestionRequest askQuestionRequest) {
+        return qaService.ask(askQuestionRequest);
     }
 
     /**
      * 流式提问接口：使用 SSE（Server-Sent Events）逐 token 推送大模型回答。
      * <p>
-     * 与 {@link #askQuestion(AskQuestionRequest, HttpServletRequest)} 流程一致：<br>
+     * 与 {@link #askQuestion(AskQuestionRequest)} 流程一致：<br>
      * 权限校验 → 查询规划 → 混合检索 → 证据评估 → 大模型流式生成回答 → 引用组装。
      * 区别在于大模型生成的回答通过 SSE 以 token 为单位实时推送给客户端。
      * </p>

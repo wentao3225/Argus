@@ -30,7 +30,9 @@ public class DocumentQueryService {
         this.currentUserService = currentUserService;
     }
 
-    /** 查询文档列表，按查询条件筛选当前用户有权查看的文档 */
+    /**
+     * 查询文档列表，按查询条件筛选当前用户有权查看的文档
+     */
     public List<DocumentListItemVO> listDocuments(DocumentQuery query) {
         DocumentQuery validatedQuery = normalizeQuery(query);
         return documentMapper.selectReadableDocuments(validatedQuery);

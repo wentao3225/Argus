@@ -1,7 +1,7 @@
 package com.argus.rag.ingestion.mapper;
 
-import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.argus.rag.ingestion.model.entity.DocumentChunkEntity;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 
@@ -14,9 +14,6 @@ import java.util.Map;
  * 提供对 document_chunks 表的 CRUD 操作，包括按文档 ID 查询、
  * 删除旧切片和批量插入等功能。切片数据用于向量检索和全文搜索。
  * </p>
- *
- * @author Argus-RAG Team
- * @since 1.0.0
  */
 @Mapper
 public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
@@ -25,8 +22,8 @@ public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
     /**
      * 批量插入文档切片数据。
      *
-     * @param chunks
-     * @return
+     * @param chunks 切片数据列表
+     * @return 影响行数
      */
     int insertBatch(@Param("chunks") List<DocumentChunkEntity> chunks);
 
@@ -80,5 +77,22 @@ public interface DocumentChunkMapper extends BaseMapper<DocumentChunkEntity> {
     List<Map<String, Object>> selectQaReadyChunksByIds(
             @Param("groupId") Long groupId,
             @Param("chunkIds") List<Long> chunkIds
+    );
+
+    /**
+     * 基于 pg_trgm 相似度匹配的关键词检索。
+     *
+     * <p>对 chunk_text 做 trigram 相似度计算，JOIN documents 表确保只检索
+     * 已摄入完成且未删除的文档切片。</p>
+     *
+     * @param groupId 群组 ID
+     * @param query   检索关键词
+     * @param limit   最大返回数
+     * @return 命中切片列表（含相似度分数 similarity）
+     */
+    List<Map<String, Object>> searchByKeywordSimilarity(
+            @Param("groupId") Long groupId,
+            @Param("query") String query,
+            @Param("limit") int limit
     );
 }

@@ -6,6 +6,7 @@ import com.argus.rag.common.log.OperationLog;
 import com.argus.rag.user.model.dto.ChangePasswordRequest;
 import com.argus.rag.user.service.AccountService;
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,18 +17,16 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @OperationLog
 @RestController
-@RequestMapping("/api/account")
+@RequiredArgsConstructor
+@RequestMapping("/account")
 public class AccountController {
 
     private final AccountService accountService;
     private final CurrentUserService currentUserService;
 
-    public AccountController(AccountService accountService, CurrentUserService currentUserService) {
-        this.accountService = accountService;
-        this.currentUserService = currentUserService;
-    }
-
-    /** 修改当前登录用户的密码 */
+    /**
+     * 修改当前登录用户的密码
+     */
     @PostMapping("/change-password")
     public ApiResponse<Void> changePassword(@Valid @RequestBody ChangePasswordRequest request) {
         accountService.changePassword(currentUserService.getRequiredCurrentUser(), request);
