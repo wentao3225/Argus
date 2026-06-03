@@ -56,7 +56,7 @@ public class CitationAssembler {
                 readInteger(metadata, "chunkIndex"),
                 fileName,
                 readScore(metadata),
-                null
+                readText(metadata, "chunkText")
         );
     }
 

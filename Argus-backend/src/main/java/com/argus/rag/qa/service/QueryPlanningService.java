@@ -7,6 +7,7 @@ import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.Prompt;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -33,19 +34,23 @@ public class QueryPlanningService {
 
     private final ChatClient queryPlanningChatClient;
     private final PromptTemplate queryPlanningUserPromptTemplate;
+    private final boolean queryPlanningEnabled;
 
     /**
      * 构造函数。
      *
      * @param queryPlanningChatClient         查询规划专用的 ChatClient
      * @param queryPlanningUserPromptTemplate 查询规划用户提示词模板
+     * @param queryPlanningEnabled            是否启用查询规划（默认 false，直接使用 DIRECT 策略）
      */
     public QueryPlanningService(
             @Qualifier("queryPlanningChatClient") ChatClient queryPlanningChatClient,
-            @Qualifier("queryPlanningUserPromptTemplate") PromptTemplate queryPlanningUserPromptTemplate
+            @Qualifier("queryPlanningUserPromptTemplate") PromptTemplate queryPlanningUserPromptTemplate,
+            @Value("${rag.qa.query-planning-enabled:false}") boolean queryPlanningEnabled
     ) {
         this.queryPlanningChatClient = queryPlanningChatClient;
         this.queryPlanningUserPromptTemplate = queryPlanningUserPromptTemplate;
+        this.queryPlanningEnabled = queryPlanningEnabled;
     }
 
     /**
@@ -60,6 +65,10 @@ public class QueryPlanningService {
      */
     public QueryPlanResult plan(String question) {
         String normalizedQuestion = requireQuestion(question);
+        if (!queryPlanningEnabled) {
+            log.debug("查询规划已禁用，使用 DIRECT 策略: questionLength={}", normalizedQuestion.length());
+            return QueryPlanResult.fallback(normalizedQuestion);
+        }
         try {
             Prompt planPrompt = queryPlanningUserPromptTemplate.create(Map.of("question", normalizedQuestion));
             QueryPlanResult rawResult = queryPlanningChatClient.prompt(planPrompt)
