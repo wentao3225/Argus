@@ -7,6 +7,10 @@ spring:
     active: dev
   application:
     name: Argus-backend
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 50MB
 # ──────────────────────────────────────────────
 # MyBatis-Plus 配置
 # ──────────────────────────────────────────────

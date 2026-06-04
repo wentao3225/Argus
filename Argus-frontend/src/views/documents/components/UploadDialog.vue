@@ -35,10 +35,12 @@ const fileInputRef = ref<HTMLInputElement | null>(null)
 const dragging = ref(false)
 const uploadMode = ref<'direct' | 'chunked'>('direct')
 const chunkProgress = ref<{ current: number; total: number }>({ current: 0, total: 0 })
+const computingHash = ref(false) // 是否正在计算 SHA-256
 
 // 当前进度描述
 const progressLabel = computed(() => {
   if (!loading.value) return ''
+  if (computingHash.value) return '计算文件哈希…'
   if (uploadMode.value === 'direct') return `${progress.value}%`
   return `分片 ${chunkProgress.value.current}/${chunkProgress.value.total} · ${progress.value}%`
 })
@@ -51,6 +53,7 @@ function resetState() {
   success.value = false
   dragging.value = false
   chunkProgress.value = { current: 0, total: 0 }
+  computingHash.value = false
 }
 
 watch(
@@ -63,6 +66,7 @@ watch(
   },
 )
 
+// 文件验证（类型和大小）
 function validateFile(f: File): string | null {
   const ext = '.' + f.name.split('.').pop()?.toLowerCase()
   if (!allowedExts.includes(ext)) {
@@ -74,6 +78,7 @@ function validateFile(f: File): string | null {
   return null
 }
 
+// 选择文件（点击或拖拽）
 function onFilePicked(e: Event) {
   const input = e.target as HTMLInputElement
   const f = input.files?.[0]
@@ -90,6 +95,9 @@ function onFilePicked(e: Event) {
   errorMsg.value = ''
   file.value = f
   uploadMode.value = f.size > DIRECT_LIMIT ? 'chunked' : 'direct'
+  if (uploadMode.value === 'chunked') {
+    chunkProgress.value.total = Math.ceil(f.size / CHUNK_SIZE)
+  }
 }
 
 function onDrop(e: DragEvent) {
@@ -106,6 +114,9 @@ function onDrop(e: DragEvent) {
   errorMsg.value = ''
   file.value = f
   uploadMode.value = f.size > DIRECT_LIMIT ? 'chunked' : 'direct'
+  if (uploadMode.value === 'chunked') {
+    chunkProgress.value.total = Math.ceil(f.size / CHUNK_SIZE)
+  }
 }
 
 function onDragOver(e: DragEvent) {
@@ -117,10 +128,31 @@ function onDragLeave() {
   dragging.value = false
 }
 
-// ── SHA-256 计算 ──
+// ── SHA-256 计算（流式读取，避免大文件卡顿） ──
 async function computeSha256(file: File): Promise<string> {
-  const buffer = await file.arrayBuffer()
-  const hashBuffer = await crypto.subtle.digest('SHA-256', buffer)
+  // 通过 FileReader 分块读取，避免大文件 arrayBuffer() 卡主线程
+  const chunkSize = 2 * 1024 * 1024 // 2MB 一块
+  const chunks = Math.ceil(file.size / chunkSize)
+  // Web Crypto 不支持流式 digest，但分块读取 + 逐次 yield
+  // 比一次性 arrayBuffer() 对大文件更友好
+  const buffers: ArrayBuffer[] = []
+  for (let i = 0; i < chunks; i++) {
+    const start = i * chunkSize
+    const end = Math.min(start + chunkSize, file.size)
+    const blob = file.slice(start, end)
+    buffers.push(await blob.arrayBuffer())
+    // 每块读取后 yield，避免长时间占用主线程
+    await new Promise((r) => setTimeout(r, 0))
+  }
+  const combined = new Uint8Array(
+    buffers.reduce((acc, buf) => acc + buf.byteLength, 0),
+  )
+  let offset = 0
+  for (const buf of buffers) {
+    combined.set(new Uint8Array(buf), offset)
+    offset += buf.byteLength
+  }
+  const hashBuffer = await crypto.subtle.digest('SHA-256', combined.buffer)
   const hashArray = Array.from(new Uint8Array(hashBuffer))
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('')
 }
@@ -218,7 +250,9 @@ async function handleUpload() {
     if (uploadMode.value === 'direct') {
       await handleDirectUpload()
     } else {
+      computingHash.value = true
       await handleChunkedUpload()
+      computingHash.value = false
     }
     success.value = true
     file.value = null
@@ -228,6 +262,7 @@ async function handleUpload() {
     }, 800)
   } catch (err) {
     errorMsg.value = extractApiError(err, '上传文件失败')
+    computingHash.value = false
   } finally {
     loading.value = false
   }
@@ -274,7 +309,7 @@ function formatSize(bytes: number): string {
 
       <!-- 上传模式提示 -->
       <div v-if="file && uploadMode === 'chunked'" class="upload-dialog__mode-tag">
-        分片上传 · {{ chunkProgress.value.total }} 片
+        分片上传 · {{ chunkProgress.total }} 片
       </div>
 
       <!-- Drop zone -->
@@ -447,107 +482,6 @@ function formatSize(bytes: number): string {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-            type="button"
-            @click.stop="fileInputRef?.click()"
-          >
-            更换文件
-          </button>
-        </template>
-      </div>
-
-      <input
-        ref="fileInputRef"
-        type="file"
-        accept=".txt,.md,.pdf,.docx"
-        class="upload-dialog__file-input"
-        @change="onFilePicked"
-      />
-
-      <!-- Progress -->
-      <div v-if="loading || success" class="upload-dialog__progress">
-        <div class="upload-dialog__progress-track">
-          <div
-            class="upload-dialog__progress-fill"
-            :class="{ 'is-done': success }"
-            :style="{ width: progress + '%' }"
-          />
-        </div>
-        <span class="upload-dialog__progress-text">
-          {{ success ? '上传成功' : `${progress}%` }}
-        </span>
-      </div>
-
-      <!-- Error with retry -->
-      <div v-if="errorMsg" class="upload-dialog__error">
-        <div class="upload-dialog__error-icon">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <span class="upload-dialog__error-text">{{ errorMsg }}</span>
-        <button
-          v-if="file && !loading"
-          class="upload-dialog__error-retry"
-          type="button"
-          @click="retryUpload"
-        >
-          重试
-        </button>
-      </div>
-
-      <!-- Actions -->
-      <div class="upload-dialog__actions">
-        <button
-          v-if="!success"
-          class="upload-dialog__btn upload-dialog__btn--primary"
-          :disabled="!file || loading"
-          @click="handleUpload"
-        >
-          <span v-if="!loading">开始上传</span>
-          <span v-else>上传中…</span>
-        </button>
-        <button
-          class="upload-dialog__btn upload-dialog__btn--ghost"
-          :disabled="loading"
-          @click="close"
-        >
-          {{ success ? '关闭' : '取消' }}
-        </button>
-      </div>
-    </div>
-  </el-dialog>
-</template>
-
-<style scoped>
-.upload-dialog__header {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.upload-dialog__eyebrow {
-  font-family: 'Poppins', sans-serif;
-  font-size: 0.7rem;
-  font-weight: 600;
-  letter-spacing: 0.16em;
-  text-transform: uppercase;
-  color: var(--brand-primary);
-}
-
-.upload-dialog__title {
-  margin: 0;
-  font-family: 'Poppins', 'Noto Sans SC', sans-serif;
-  font-size: 1.2rem;
-  font-weight: 700;
-  color: var(--text-primary);
-}
-
-.upload-dialog {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .upload-dialog__group {
