@@ -1,5 +1,6 @@
 package com.argus.rag.qa.controller;
 
+import com.argus.rag.common.exception.BusinessException;
 import com.argus.rag.common.log.OperationLog;
 import com.argus.rag.qa.model.dto.AskQuestionRequest;
 import com.argus.rag.qa.model.vo.AskQuestionResponse;
@@ -129,7 +130,11 @@ public class QaController {
                         }
                     })
                     .doOnError(error -> {
-                        log.error("流式问答 token 流异常", error);
+                        if (error instanceof BusinessException) {
+                            log.info("流式问答被拒答: {}", error.getMessage());
+                        } else {
+                            log.error("流式问答 token 流异常", error);
+                        }
                         try {
                             String message = error.getMessage() != null
                                     ? error.getMessage()

@@ -99,6 +99,16 @@ public class QaChatService {
                     AskQuestionResponse.unanswered(INSUFFICIENT_CODE, INSUFFICIENT_MESSAGE, List.of()),
                     new UsageInfo(0, 0, 0, false, elapsedMs));
         }
+        // 证据等级不足时直接拒答，不调用 LLM
+        EvidenceLevel evidenceLevel = evidenceBundle.evidenceLevel();
+        if (evidenceLevel != null && evidenceLevel.ordinal() < EvidenceLevel.PARTIAL.ordinal()) {
+            long elapsedMs = (System.nanoTime() - startNano) / 1_000_000;
+            log.info("问答证据不足: groupId={}, evidenceLevel={}, elapsedMs={}",
+                    groupId, evidenceLevel, elapsedMs);
+            return new AskResult(
+                    AskQuestionResponse.unanswered(INSUFFICIENT_CODE, INSUFFICIENT_MESSAGE, List.of()),
+                    new UsageInfo(0, 0, 0, false, elapsedMs));
+        }
         LlmCallResult result = getStructuredAnswer(groupId, question, evidenceBundle);
         long latencyMs = System.currentTimeMillis() - startMs;
         if (result.output() == null) {
@@ -262,6 +272,16 @@ public class QaChatService {
         if (documents.isEmpty()) {
             log.info("流式问答无证据可答: groupId={}, elapsedMs={}",
                     groupId, (System.nanoTime() - startNano) / 1_000_000);
+            return new StreamContext(
+                    Flux.error(new BusinessException(
+                            INSUFFICIENT_CODE + ": " + INSUFFICIENT_MESSAGE)),
+                    List.of());
+        }
+        // 证据等级不足时直接拒答，不调用 LLM
+        EvidenceLevel evidenceLevel = evidenceBundle.evidenceLevel();
+        if (evidenceLevel != null && evidenceLevel.ordinal() < EvidenceLevel.PARTIAL.ordinal()) {
+            log.info("流式问答证据不足: groupId={}, evidenceLevel={}, elapsedMs={}",
+                    groupId, evidenceLevel, (System.nanoTime() - startNano) / 1_000_000);
             return new StreamContext(
                     Flux.error(new BusinessException(
                             INSUFFICIENT_CODE + ": " + INSUFFICIENT_MESSAGE)),

@@ -52,6 +52,14 @@ public class HybridChunkRetrievalService {
     private static final int RRF_K = 0;
 
     /**
+     * 证据评估的最低相似度阈值。
+     * 归一化 RRF 分数低于此值的文档视为噪声，不作为有效证据。
+     * 归一化分数 ~0.63 对应单通道 rank-1，~0.86 对应双通道 rank-1。
+     * 设为 0.75 确保只有真正相关的文档才能通过证据评估。
+     */
+    private static final double MIN_SCORE_THRESHOLD = 0.75;
+
+    /**
      * 向量检索适配器
      */
     private final PgVectorRetrievalAdapter vectorRetrievalAdapter;
@@ -357,18 +365,28 @@ public class HybridChunkRetrievalService {
         if (documents.isEmpty()) {
             return EvidenceLevel.NONE;
         }
-        boolean hasBothSource = documents.stream()
-                .map(document -> document.getMetadata().get("retrievalSource"))
-                .anyMatch("BOTH"::equals);
-        boolean hasVectorEvidence = documents.stream()
-                .map(document -> document.getMetadata().get("retrievalSource"))
-                .anyMatch(source -> "VECTOR".equals(source) || "BOTH".equals(source));
+        // 顶部文档的最高分低于阈值，视为无相关证据（pgvector 噪声）
         double topScore = documents.stream()
                 .map(document -> document.getMetadata().get("score"))
                 .filter(Double.class::isInstance)
                 .map(Double.class::cast)
                 .max(Double::compareTo)
                 .orElse(0D);
+        if (topScore < MIN_SCORE_THRESHOLD) {
+            log.debug("证据评估: topScore={} < 阈值{}, 判定为 NONE", topScore, MIN_SCORE_THRESHOLD);
+            return EvidenceLevel.NONE;
+        }
+        boolean hasBothSource = documents.stream()
+                .map(document -> document.getMetadata().get("retrievalSource"))
+                .anyMatch("BOTH"::equals);
+        boolean hasVectorEvidence = documents.stream()
+                .map(document -> document.getMetadata().get("retrievalSource"))
+                .anyMatch(source -> "VECTOR".equals(source) || "BOTH".equals(source));
+        // 仅单通道命中且最高分偏低，判定为 WEAK（避免噪声文档被误判为有效证据）
+        if (!hasBothSource && topScore < 0.85D) {
+            log.debug("证据评估: 单通道命中, topScore={}, 判定为 WEAK", topScore);
+            return EvidenceLevel.WEAK;
+        }
         // 归一化后 score ≥ 0.85 对应双通道 rank-1 或多次高排名命中
         if (documents.size() >= 2 && (hasBothSource || (hasVectorEvidence && topScore >= 0.85D))) {
             return EvidenceLevel.SUFFICIENT;
