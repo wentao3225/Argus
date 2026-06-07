@@ -6,6 +6,7 @@
 
 # --- IDE ---
 .idea/
+.understand-anything/
 *.iml
 *.iws
 *.ipr
