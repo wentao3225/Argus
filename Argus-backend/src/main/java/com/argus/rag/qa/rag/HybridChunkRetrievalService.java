@@ -76,6 +76,11 @@ public class HybridChunkRetrievalService {
      * 查询规划服务
      */
     private final QueryPlanningService queryPlanningService;
+
+    /**
+     * LLM 重排序服务（可选，通过配置开关控制）
+     */
+    private final ChunkRerankerService chunkRerankerService;
     /**
      * 邻居窗口大小
      */
@@ -89,12 +94,14 @@ public class HybridChunkRetrievalService {
             PgVectorRetrievalAdapter vectorRetrievalAdapter,
             PgKeywordSearchService pgKeywordSearchService,
             DocumentChunkMapper documentChunkMapper,
-            QueryPlanningService queryPlanningService) {
+            QueryPlanningService queryPlanningService,
+            Optional<ChunkRerankerService> chunkRerankerService) {
         this(
                 vectorRetrievalAdapter,
                 pgKeywordSearchService,
                 documentChunkMapper,
                 queryPlanningService,
+                chunkRerankerService.orElse(null),
                 DEFAULT_NEIGHBOR_WINDOW);
     }
 
@@ -106,11 +113,13 @@ public class HybridChunkRetrievalService {
             PgKeywordSearchService pgKeywordSearchService,
             DocumentChunkMapper documentChunkMapper,
             QueryPlanningService queryPlanningService,
+            ChunkRerankerService chunkRerankerService,
             int neighborWindow) {
         this.vectorRetrievalAdapter = vectorRetrievalAdapter;
         this.pgKeywordSearchService = pgKeywordSearchService;
         this.documentChunkMapper = documentChunkMapper;
         this.queryPlanningService = queryPlanningService;
+        this.chunkRerankerService = chunkRerankerService;
         this.neighborWindow = Math.max(0, neighborWindow);
     }
 
@@ -160,6 +169,10 @@ public class HybridChunkRetrievalService {
                         .comparingDouble(RetrievalCandidate::rankingScore).reversed()
                         .thenComparing(RetrievalCandidate::chunkId))
                 .toList();
+        // 用 LLM 对 RRF 粗排后的候选做精细相关性评估
+        if (chunkRerankerService != null) {
+            rankedCandidates = chunkRerankerService.rerank(normalizedQuestion, rankedCandidates);
+        }
         // 聚类分组：仅用于邻居窗口扩展，不决定输出数量
         List<RetrievalCluster> rankedClusters = buildClusters(rankedCandidates);
         // 建立 chunkId -> 所属类簇映射，供每个候选查询其窗口范围
@@ -531,6 +544,10 @@ public class HybridChunkRetrievalService {
          */
         private final Integer chunkIndex;
         /**
+         * 切片文本内容（供重排序器使用）
+         */
+        private final String chunkText;
+        /**
          * 向量检索评分（取多次命中的最大值）
          */
         private double vectorScore;
@@ -551,24 +568,25 @@ public class HybridChunkRetrievalService {
          */
         private boolean keywordMatched;
 
-        private RetrievalCandidate(Long documentId, Long chunkId, Integer chunkIndex) {
+        private RetrievalCandidate(Long documentId, Long chunkId, Integer chunkIndex, String chunkText) {
             this.documentId = documentId;
             this.chunkId = chunkId;
             this.chunkIndex = chunkIndex;
+            this.chunkText = chunkText;
         }
 
         /**
          * 从向量检索命中结果创建候选项
          */
         static RetrievalCandidate fromVectorHit(PgVectorRetrievalAdapter.VectorHit hit) {
-            return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex());
+            return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex(), hit.chunkText());
         }
 
         /**
          * 从关键词检索命中结果创建候选项
          */
         static RetrievalCandidate fromKeywordHit(PgKeywordSearchService.KeywordHit hit) {
-            return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex());
+            return new RetrievalCandidate(hit.documentId(), hit.chunkId(), hit.chunkIndex(), hit.chunkText());
         }
 
         /**
@@ -599,6 +617,10 @@ public class HybridChunkRetrievalService {
 
         Integer chunkIndex() {
             return chunkIndex;
+        }
+
+        String chunkText() {
+            return chunkText;
         }
 
         double vectorScore() {

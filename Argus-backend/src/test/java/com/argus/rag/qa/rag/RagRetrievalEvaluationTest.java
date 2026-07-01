@@ -239,7 +239,7 @@ class RagRetrievalEvaluationTest {
             );
             results.add(result);
 
-            log.info("  [{}] vectorRecall={}, keywordRecall={}, hybridRecall={}", id, String.format("%.3f", result.vectorRecall()),
+            log.info("  [{}] vectorRecall={}, keywordRecall={}, hybridRerankRecall={}", id, String.format("%.3f", result.vectorRecall()),
                     String.format("%.3f", result.keywordRecall()),
                     String.format("%.3f", result.hybridRecall()));
         }
@@ -252,9 +252,9 @@ class RagRetrievalEvaluationTest {
                 fmt(summary.avgVectorRecall()), fmt(summary.avgVectorPrecision()), fmt(summary.avgVectorMrr()));
         log.info("  纯关键词 — 平均 Recall@5: {}, Precision@5: {}, MRR: {}",
                 fmt(summary.avgKeywordRecall()), fmt(summary.avgKeywordPrecision()), fmt(summary.avgKeywordMrr()));
-        log.info("  混合检索 — 平均 Recall@5: {}, Precision@5: {}, MRR: {}",
+        log.info("  混合检索+重排 — 平均 Recall@5: {}, Precision@5: {}, MRR: {}",
                 fmt(summary.avgHybridRecall()), fmt(summary.avgHybridPrecision()), fmt(summary.avgHybridMrr()));
-        log.info("  混合 vs 向量 Recall 提升: {}%", fmt(summary.recallImprovementPercent()));
+        log.info("  混合+重排 vs 向量 Recall 提升: {}%", fmt(summary.recallImprovementPercent()));
         log.info("═══════════════════════════════════════════════");
 
         // 输出 Markdown 报告
@@ -343,7 +343,7 @@ class RagRetrievalEvaluationTest {
         sb.append("- **MRR**（Mean Reciprocal Rank）：Ground Truth 文档在各方法结果中的平均排名倒数\n\n");
 
         sb.append("## 汇总结果\n\n");
-        sb.append("| 指标 | 纯向量 | 纯关键词 | 混合检索 |\n");
+        sb.append("| 指标 | 纯向量 | 纯关键词 | 混合检索+重排 |\n");
         sb.append("|------|--------|---------|----------|\n");
         sb.append(String.format("| 平均 Recall@5 | %s | %s | **%s** |\n",
                 fmt(summary.avgVectorRecall()), fmt(summary.avgKeywordRecall()), fmt(summary.avgHybridRecall())));
@@ -352,10 +352,10 @@ class RagRetrievalEvaluationTest {
         sb.append(String.format("| 平均 MRR | %s | %s | **%s** |\n",
                 fmt(summary.avgVectorMrr()), fmt(summary.avgKeywordMrr()), fmt(summary.avgHybridMrr())));
         sb.append("\n");
-        sb.append(String.format("**混合检索 vs 纯向量 Recall 提升：%.1f%%**\n\n", summary.recallImprovementPercent()));
+        sb.append(String.format("**混合检索（含 LLM 重排）vs 纯向量 Recall 提升：%.1f%%**\n\n", summary.recallImprovementPercent()));
 
         sb.append("## 逐 Query 明细\n\n");
-        sb.append("| # | 类型 | Query | GT数量 | 向量R | 关键词R | 混合R |\n");
+        sb.append("| # | 类型 | Query | GT数量 | 向量R | 关键词R | 混合+重排R |\n");
         sb.append("|---|------|-------|--------|-------|---------|-------|\n");
         for (EvalResult r : results) {
             sb.append(String.format("| %s | %s | %s | %d | %.2f | %.2f | **%.2f** |\n",
@@ -368,7 +368,7 @@ class RagRetrievalEvaluationTest {
                 .filter(r -> r.groundTruthCount() > 0)
                 .collect(Collectors.groupingBy(EvalResult::type));
 
-        sb.append("| 类型 | 向量平均R | 关键词平均R | 混合平均R | 混合提升 |\n");
+        sb.append("| 类型 | 向量平均R | 关键词平均R | 混合+重排平均R | 混合+重排提升 |\n");
         sb.append("|------|----------|------------|----------|----------|\n");
         for (var entry : byType.entrySet()) {
             double avgV = avg(entry.getValue(), EvalResult::vectorRecall);
