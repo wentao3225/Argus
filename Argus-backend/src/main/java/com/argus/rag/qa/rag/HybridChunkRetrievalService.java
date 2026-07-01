@@ -154,31 +154,42 @@ public class HybridChunkRetrievalService {
             return RetrievedEvidenceBundle.empty();
         }
 
-        // 排序与截断
+        // 排序（不在排序阶段截断，避免聚类吞掉候选导致输出不足 topK）
         List<RetrievalCandidate> rankedCandidates = candidates.values().stream()
                 .sorted(Comparator
                         .comparingDouble(RetrievalCandidate::rankingScore).reversed()
                         .thenComparing(RetrievalCandidate::chunkId))
+                .toList();
+        // 聚类分组：仅用于邻居窗口扩展，不决定输出数量
+        List<RetrievalCluster> rankedClusters = buildClusters(rankedCandidates);
+        // 建立 chunkId -> 所属类簇映射，供每个候选查询其窗口范围
+        Map<Long, RetrievalCluster> clusterByChunkId = new LinkedHashMap<>();
+        for (RetrievalCluster cluster : rankedClusters) {
+            for (RetrievalCandidate member : cluster.members()) {
+                clusterByChunkId.put(member.chunkId(), cluster);
+            }
+        }
+        // 取 topK 候选，每个候选独立产出一条证据，确保输出数量等于 topK
+        List<RetrievalCandidate> topKCandidates = rankedCandidates.stream()
                 .limit(validTopK)
                 .toList();
-        // 聚类分组
-        List<RetrievalCluster> rankedClusters = buildClusters(rankedCandidates);
-        log.info("RRF融合排序完成: groupId={}, rankedCandidates={}, clusters={}",
-                validGroupId, rankedCandidates.size(), rankedClusters.size());
+        log.info("RRF融合排序完成: groupId={}, rankedCandidates={}, clusters={}, topK={}",
+                validGroupId, rankedCandidates.size(), rankedClusters.size(), topKCandidates.size());
 
         // 批量查询切片的完整数据库记录
-        List<Long> chunkIds = rankedCandidates.stream().map(RetrievalCandidate::chunkId).toList();
+        List<Long> chunkIds = topKCandidates.stream().map(RetrievalCandidate::chunkId).toList();
         Map<Long, Map<String, Object>> rowByChunkId = indexRows(
                 documentChunkMapper.selectQaReadyChunksByIds(validGroupId, chunkIds));
         Map<Long, List<DocumentChunkEntity>> chunkWindowCache = new LinkedHashMap<>();
         List<Document> documents = new ArrayList<>();
         int evidenceIndex = 1;
-        for (RetrievalCluster cluster : rankedClusters) {
-            Map<String, Object> row = rowByChunkId.get(cluster.primaryChunkId());
+        for (RetrievalCandidate candidate : topKCandidates) {
+            Map<String, Object> row = rowByChunkId.get(candidate.chunkId());
             if (row == null) {
                 continue;
             }
-            Document document = toDocument("E" + evidenceIndex, row, cluster, chunkWindowCache);
+            RetrievalCluster cluster = clusterByChunkId.get(candidate.chunkId());
+            Document document = toDocument("E" + evidenceIndex, row, candidate, cluster, chunkWindowCache);
             if (document == null) {
                 continue;
             }
@@ -248,16 +259,21 @@ public class HybridChunkRetrievalService {
     }
 
     /**
-     * 将检索候选和数据库数据组装为 Spring AI 的 Document 对象
+     * 将检索候选和数据库数据组装为 Spring AI 的 Document 对象。
+     * <p>
+     * 方案 B：每个候选独立产出一条证据，评分和来源取候选自身；
+     * 聚类仅用于确定邻居窗口扩展范围（startChunkIndex/endChunkIndex）。
+     * </p>
      */
     private Document toDocument(
             String evidenceId,
             Map<String, Object> row,
+            RetrievalCandidate candidate,
             RetrievalCluster cluster,
             Map<Long, List<DocumentChunkEntity>> chunkWindowCache) {
         Long documentId = requireLong(getValue(row, "documentId"), "documentId");
         Integer chunkIndex = requireInteger(getValue(row, "chunkIndex"), "chunkIndex");
-        if (!documentId.equals(cluster.documentId()) || !chunkIndex.equals(cluster.primaryChunkIndex())) {
+        if (!documentId.equals(candidate.documentId()) || !chunkIndex.equals(candidate.chunkIndex())) {
             throw new BusinessException("检索结果与文档切片不一致");
         }
         Long chunkId = requireLong(getValue(row, "chunkId"), "chunkId");
@@ -270,17 +286,17 @@ public class HybridChunkRetrievalService {
         metadata.put("chunkId", chunkId);
         metadata.put("chunkIndex", chunkIndex);
         metadata.put("chunkText", chunkText);
-        metadata.put("primaryChunkId", cluster.primaryChunkId());
-        metadata.put("primaryChunkIndex", cluster.primaryChunkIndex());
+        metadata.put("primaryChunkId", candidate.chunkId());
+        metadata.put("primaryChunkIndex", candidate.chunkIndex());
         metadata.put("startChunkIndex", cluster.expandedStartChunkIndex(neighborWindow));
         metadata.put("endChunkIndex", cluster.expandedEndChunkIndex(neighborWindow));
         metadata.put("fileName", fileName);
-        double normalizedScore = normalizeScore(cluster.rankingScore());
+        double normalizedScore = normalizeScore(candidate.rankingScore());
         metadata.put("score", normalizedScore);
-        metadata.put("retrievalSource", cluster.source());
-        metadata.put("vectorScore", cluster.vectorScore());
-        metadata.put("keywordScore", cluster.keywordScore());
-        metadata.put("hybridScore", cluster.rankingScore());
+        metadata.put("retrievalSource", candidate.source());
+        metadata.put("vectorScore", candidate.vectorScore());
+        metadata.put("keywordScore", candidate.keywordScore());
+        metadata.put("hybridScore", candidate.rankingScore());
         String evidenceText = buildEvidenceWindow(row, cluster, chunkWindowCache);
         if (!StringUtils.hasText(evidenceText)) {
             return null;
@@ -702,6 +718,13 @@ public class HybridChunkRetrievalService {
 
         Long documentId() {
             return documentId;
+        }
+
+        /**
+         * 获取类簇内所有候选切片（不可变视图），用于建立 chunkId -> cluster 映射
+         */
+        List<RetrievalCandidate> members() {
+            return Collections.unmodifiableList(members);
         }
 
         Long primaryChunkId() {

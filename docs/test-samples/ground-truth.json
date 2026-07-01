@@ -1,0 +1,268 @@
+{
+  "documents": [
+    "01-PostgreSQL索引优化指南.md",
+    "02-微服务架构设计原则与实践.md",
+    "03-Docker容器化部署最佳实践.md",
+    "04-消息队列技术选型与应用场景.md",
+    "05-API网关设计与流量治理.md"
+  ],
+  "description": "RAG 混合检索评估 Ground Truth 定义。expectedChunks 中的 text 片段用于匹配实际 chunk 内容，匹配到的 chunk 即为该 query 的正确答案。",
+  "testCases": [
+    {
+      "id": "Q01",
+      "type": "精确关键词",
+      "query": "B-tree索引的时间复杂度是多少",
+      "description": "测试精确技术术语匹配。query 包含 'B-tree'、'时间复杂度' 等关键词，应匹配到 01 文档中 B-tree 索引介绍的段落。",
+      "expectedChunks": [
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "B-tree 索引的时间复杂度为 O(log n)"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "B-tree 是 PostgreSQL 默认的索引类型"
+        }
+      ]
+    },
+    {
+      "id": "Q02",
+      "type": "语义理解",
+      "query": "如何减小数据库索引占用的存储空间",
+      "description": "测试语义理解能力。用户问的是'减小存储空间'，文档中用的是'体积极小'、'减小索引体积'等表述。关键词搜索可能匹配不到，向量搜索应能理解语义。",
+      "expectedChunks": [
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "BRIN 索引的体积极小"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "部分索引只索引表中满足特定条件的行"
+        }
+      ]
+    },
+    {
+      "id": "Q03",
+      "type": "精确关键词",
+      "query": "GIN索引适用于哪些场景",
+      "description": "测试精确术语匹配。'GIN' 是专业缩写，应精确匹配到 GIN 索引相关段落。",
+      "expectedChunks": [
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "GIN（Generalized Inverted Index，通用倒排索引）"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "JSONB 字段的"
+        }
+      ]
+    },
+    {
+      "id": "Q04",
+      "type": "语义理解",
+      "query": "微服务之间如何保证数据一致性",
+      "description": "测试语义理解。用户问'数据一致性'，文档中提到 'Saga 模式'、'跨服务的数据一致性'。需要理解 '保证数据一致性' 和 '解决跨服务数据一致性' 是同一语义。",
+      "expectedChunks": [
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "跨服务的数据一致性通常通过 Saga 模式解决"
+        },
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "数据库独立"
+        }
+      ]
+    },
+    {
+      "id": "Q05",
+      "type": "多条件复合",
+      "query": "Docker多阶段构建Java应用的Dockerfile怎么写",
+      "description": "测试多条件复合匹配。需要同时匹配 'Docker多阶段构建' 和 'Java应用' 两个条件。单独匹配任一条件都会返回过多结果。",
+      "expectedChunks": [
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "多阶段构建（Multi-stage Build）是优化镜像大小的关键技术"
+        },
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "maven:3.9-eclipse-temurin-21"
+        }
+      ]
+    },
+    {
+      "id": "Q06",
+      "type": "精确关键词",
+      "query": "Kafka的acks参数有哪些配置选项",
+      "description": "测试精确技术参数匹配。'acks' 是 Kafka 的专有参数名，应精确匹配。",
+      "expectedChunks": [
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "acks"
+        }
+      ]
+    },
+    {
+      "id": "Q07",
+      "type": "语义理解",
+      "query": "如何防止消息被重复处理",
+      "description": "测试同义词理解。用户说'重复处理'，文档中用的是'幂等消费'、'重复消息'。关键词搜索可能匹配不到'幂等'，向量搜索应能理解语义。",
+      "expectedChunks": [
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "幂等消费"
+        },
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "至少一次投递"
+        },
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "数据库唯一约束"
+        }
+      ]
+    },
+    {
+      "id": "Q08",
+      "type": "精确关键词",
+      "query": "API网关的令牌桶限流算法原理",
+      "description": "测试精确技术术语匹配。'令牌桶' 是限流算法的专有名称。",
+      "expectedChunks": [
+        {
+          "document": "05-API网关设计与流量治理.md",
+          "text": "令牌桶算法（Token Bucket）"
+        },
+        {
+          "document": "05-API网关设计与流量治理.md",
+          "text": "漏桶算法（Leaky Bucket）"
+        }
+      ]
+    },
+    {
+      "id": "Q09",
+      "type": "语义理解",
+      "query": "分布式系统中怎么追踪一个请求经过了哪些服务",
+      "description": "测试语义理解。用户描述的是'追踪请求经过哪些服务'，文档中用的是'链路追踪'、'Trace ID'。需要理解两者的语义等价关系。此 query 在两份文档中都有相关内容，测试跨文档检索能力。",
+      "expectedChunks": [
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "链路追踪"
+        },
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "Trace"
+        },
+        {
+          "document": "05-API网关设计与流量治理.md",
+          "text": "链路追踪"
+        }
+      ]
+    },
+    {
+      "id": "Q10",
+      "type": "多条件复合",
+      "query": "pgvector HNSW索引的m和ef_construction参数怎么设置",
+      "description": "测试多条件精确匹配。需要同时匹配 'pgvector'、'HNSW'、'm'、'ef_construction' 多个技术参数。单独搜 'm' 会返回大量无关结果。",
+      "expectedChunks": [
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "HNSW（Hierarchical Navigable Small World）"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "ef_construction"
+        }
+      ]
+    },
+    {
+      "id": "Q11",
+      "type": "语义理解",
+      "query": "容器里运行Java程序内存怎么配置才不会OOM",
+      "description": "测试口语化语义理解。'OOM' 是口语化表述，文档中用的是 'JVM 堆内存'、'MaxRAMPercentage'。需要理解 OOM 和内存配置的语义关系。",
+      "expectedChunks": [
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "MaxRAMPercentage"
+        },
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "JVM 堆内存最多使用容器内存限制的 75%"
+        }
+      ]
+    },
+    {
+      "id": "Q12",
+      "type": "精确关键词",
+      "query": "RabbitMQ的Exchange类型有哪些",
+      "description": "测试精确术语匹配。'RabbitMQ'、'Exchange' 是消息队列专有名词。",
+      "expectedChunks": [
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "Direct"
+        },
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "Fanout"
+        },
+        {
+          "document": "04-消息队列技术选型与应用场景.md",
+          "text": "Topic"
+        }
+      ]
+    },
+    {
+      "id": "Q13",
+      "type": "多条件复合",
+      "query": "微服务架构中熔断器的实现和配置",
+      "description": "测试多条件匹配。'微服务' + '熔断器' + '实现' + '配置'，需要匹配到包含 Resilience4j 代码示例的段落。注意：熔断器在文档2和文档5中都有提及。",
+      "expectedChunks": [
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "Resilience4j"
+        },
+        {
+          "document": "02-微服务架构设计原则与实践.md",
+          "text": "CircuitBreakerConfig"
+        },
+        {
+          "document": "05-API网关设计与流量治理.md",
+          "text": "熔断器的三种状态"
+        }
+      ]
+    },
+    {
+      "id": "Q14",
+      "type": "语义理解",
+      "query": "数据库查询很慢怎么分析原因",
+      "description": "测试语义理解。用户问'查询很慢怎么分析'，文档中讲的是 'EXPLAIN 分析'、'全表扫描'、'Nested Loop 效率低'。需要理解 '查询很慢' 和 EXPLAIN 输出分析的语义关系。",
+      "expectedChunks": [
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "EXPLAIN"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "全表扫描（Seq Scan）出现在不该出现的地方"
+        },
+        {
+          "document": "01-PostgreSQL索引优化指南.md",
+          "text": "actual time"
+        }
+      ]
+    },
+    {
+      "id": "Q15",
+      "type": "精确关键词",
+      "query": "Docker Compose的healthcheck配置",
+      "description": "测试精确配置参数匹配。'Docker Compose' + 'healthcheck' 是特定配置项。注：实际 chunk 文本中关键词为 'Healthcheck'（首字母大写），且 start_period 未被切入任何 chunk，故改用 '健康检查' 作为第二匹配点（同属 chunk 800）。",
+      "expectedChunks": [
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "Healthcheck"
+        },
+        {
+          "document": "03-Docker容器化部署最佳实践.md",
+          "text": "健康检查"
+        }
+      ]
+    }
+  ]
+}

@@ -100,7 +100,7 @@ public class QueryPlanningService {
         List<String> finalQueries = switch (rawResult.strategy()) {
             case DIRECT -> List.of(originalQuestion);
             case REWRITE -> buildRewriteQueries(originalQuestion, normalizedQueries);
-            case DECOMPOSE -> limitQueries(normalizedQueries);
+            case DECOMPOSE -> buildDecomposeQueries(originalQuestion, normalizedQueries);
         };
         if (finalQueries.isEmpty()) {
             log.warn("由于：finalQueries.isEmpty()。查询规划回退~");
@@ -117,6 +117,20 @@ public class QueryPlanningService {
         rewriteQueries.add(originalQuestion);
         rewriteQueries.addAll(normalizedQueries);
         return limitQueries(rewriteQueries);
+    }
+
+    /**
+     * 构建 DECOMPOSE 策略的检索语句：原始问题 + 分解后的子问题。
+     * <p>
+     * 包含原始问题确保同时覆盖多个子主题的 GT chunk 不会被只匹配单一子主题的
+     * 专用 chunk 通过累加 RRF 分数击败。
+     * </p>
+     */
+    private List<String> buildDecomposeQueries(String originalQuestion, Set<String> normalizedQueries) {
+        LinkedHashSet<String> decomposeQueries = new LinkedHashSet<>();
+        decomposeQueries.add(originalQuestion);
+        decomposeQueries.addAll(normalizedQueries);
+        return limitQueries(decomposeQueries);
     }
 
     /**
