@@ -61,6 +61,7 @@ RRF 融合排序 → 证据评估 → LLM 生成回答 → 返回引用溯源
 | 切片策略 | 结构感知分层切片 | 标题 → 段落 → 句子 → 固定长度，overlap 32 |
 | **混合检索** | **pgvector + pg_trgm 双通道** | 一套 PostgreSQL 搞定，无需额外中间件 |
 | 排序融合 | RRF（Reciprocal Rank Fusion） | `RRF_K = 0`，按排名倒数累加 |
+| 检索评估 | 15 Query 三类场景对比测试 | 纯向量 Recall@5 达 90.56%，混合检索较纯关键词 Recall 提升 39%、MRR 提升 61% |
 | 证据评估 | 四级充分度（NONE→WEAK→PARTIAL→SUFFICIENT） | 不足时主动拒答 |
 | 查询规划 | LLM 分析问题 → DIRECT/REWRITE/DECOMPOSE | 可配置关闭（`query-planning-enabled`） |
 
