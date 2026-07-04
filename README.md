@@ -185,7 +185,7 @@ rag:
 ```bash
 # 后端
 cd Argus-backend
-mvn spring-boot:run        # 端口 10001
+mvn spring-boot:run        # 端口 8080
 
 # 前端
 cd Argus-frontend
@@ -224,8 +224,9 @@ npm run dev                # 端口 5173
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/documents/upload/init` | 初始化分片上传 |
+| GET | `/api/documents/upload/{uploadId}` | 查询上传状态 |
 | POST | `/api/documents/upload/chunks` | 上传分片 |
-| POST | `/api/documents/upload/{id}/complete` | 完成上传，触发 ETL |
+| POST | `/api/documents/upload/{uploadId}/complete` | 完成上传，触发 ETL |
 | POST | `/api/documents/upload` | 小文件直传（≤10MB） |
 | GET | `/api/documents` | 文档列表 |
 | GET | `/api/documents/{id}/preview` | 预览 |
@@ -236,7 +237,7 @@ npm run dev                # 端口 5173
 | 方法 | 路径 | 说明 |
 |------|------|------|
 | POST | `/api/qa/ask` | 提交问题，获取 AI 回答 + 引用 |
-| GET | `/api/qa/stream-ask`（SSE） | 流式问答 |
+| POST | `/api/qa/stream-ask`（SSE） | 流式问答 |
 
 <details>
 <summary><b>请求/响应示例</b></summary>
